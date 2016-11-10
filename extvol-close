@@ -1,0 +1,19 @@
+#!/usr/bin/python
+# Encoding: UTF-8
+""" Close an open truecrypt volume. """
+import sys
+import gettext
+import extvolmanager
+
+gettext.install("extended-volume-manager", unicode=1)
+
+if __name__ == "__main__":
+    # See if script was called with exactly one file selected,
+    # and set up local variables accordingly.
+    if len(sys.argv) != 2:
+        extvolmanager.show_error(_("Too many arguments."))
+        exit(0)
+
+    mountpoint = sys.argv[1].decode('utf-8', 'replace')
+
+    extvolmanager.ext_tc_close(mountpoint)

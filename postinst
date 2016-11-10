@@ -1,0 +1,10 @@
+#!/bin/bash -e
+#
+# postinst for truecrypt-helper
+#
+if [[ "$1" == "configure" ]]
+then
+    egrep -q "mtools_skip_check" /etc/mtools.conf || /bin/echo -e "\nmtools_skip_check=1" >> /etc/mtools.conf    
+fi
+
+exit 0

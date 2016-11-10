@@ -1,0 +1,3 @@
+/etc/X11/Xsession.d/70extvol-cleanup
+/etc/sudoers.d/extvol-manager-sudo
+/etc/xdg/autostart/extvol-device-listener.desktop

@@ -1,0 +1,12 @@
+40b2970c7d099d1a7872d5e2b8a9433c  usr/bin/extvol-close
+4afb6b6bf9012d190c350faf3a2b98cb  usr/bin/extvol-device-listener.py
+9c5f3959476dc60a53b9b10a723af45d  usr/bin/gconf-dumper.py
+437e4135d7190665f72166e373aa668d  usr/bin/tc-backup-signature
+c4951e64855ce6e0de55653a77446b25  usr/bin/vbox-starter.sh
+e92f336f558205ed4ce86a125a9bae00  usr/lib/python2.7/dist-packages/extvolmanager.py
+ea9d0423dd6725c36a560bd5a8dd710a  usr/lib/python2.7/dist-packages/fileutils.py
+b781e64785952857211434454fc34392  usr/share/doc/extended-volume-manager/README.Debian
+d55ad8c1474fcd1afdcdbe6df7b0f25c  usr/share/doc/extended-volume-manager/changelog.gz
+6aae1bc1ee2dd2b160e58b2bc4776902  usr/share/doc/extended-volume-manager/copyright
+29ecea241e4f32da3a4000b4a7246ec1  usr/share/locale/de/LC_MESSAGES/extended-volume-manager.mo
+85bb51d6f7eeec6dc1b62b1c90471a9d  usr/share/nemo-python/extensions/extvol-manager.py
