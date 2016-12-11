@@ -1,5 +1,5 @@
 Source: extended-volume-manager
-Section: unknown
+Section: utils
 Priority: optional
 Maintainer: Discreete Linux Team <info@discreete-linux.org>
 Build-Depends: debhelper (>= 9)
@@ -9,12 +9,11 @@ Homepage: https://www.discreete-linux.org
 Package: extended-volume-manager
 Architecture: all
 Depends: ${misc:Depends}, util-linux, python, 
- python-notify, python-daemon, hamster-applet, 
- rsync (>= 3.0), dosfstools, ntfs-3g,
+ python-daemon, hamster-applet, 
+ rsync (>= 3.0), dosfstools, ntfs-3g, tracker,
  mtools, xterm, usb-imagewriter-ng, gir1.2-notify-0.7, exfat-utils
-Recommends: virtualbox | virtualbox-ose | virtualbox-4.1 | virtualbox-4.2 | 
+Suggests: fpm2, virtualbox | virtualbox-ose | virtualbox-4.1 | virtualbox-4.2 | 
  virtualbox-4.3 | virtualbox-5.0 | virtualbox-5.1
-Suggests: fpm2
 Description: Provides the functionality of "extended Volumes"
  This package provides the functionality of "extended Volumes" within
  Discreete Linux, i.e. encrypted volumes which contain user configuration

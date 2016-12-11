@@ -12,10 +12,10 @@ class ExtvolDeviceListener(object):
         device = data.get_volume().get_identifier("unix-device")
         if device.startswith("/dev/dm-") and os.path.exists(os.path.join(mountpoint, ".extended_volume")):
             if extvolmanager.ask_user(_("Extended volume"),
-                                      _("This appears to be an extended TrueCrypt Volume. "
+                                      _("This appears to be an extended Volume. "
                                         "Do you want to make use of the settings "
                                         "stored therein?")):
-                extvolmanager.ext_tc_open(mountpoint, device)
+                extvolmanager.extvol_open(mountpoint, device)
 
     def __init__(self):
         self.vm = Gio.VolumeMonitor.get()

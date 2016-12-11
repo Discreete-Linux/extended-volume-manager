@@ -768,6 +768,22 @@ def _open_grsync(mountpoint):
 def _close_grsync(mountpoint):
     _unlink_confdir(mountpoint, ".grsync")
 
+def _open_tracker(mountpoint):
+    subprocess.call(["tracker-control", "-k", "all"])
+    _link_confdir(mountpoint, ".cache/tracker")
+    _link_confdir(mountpoint, ".config/tracker")
+    _link_confdir(mountpoint, ".local/share/tracker")
+    _load_dconf(mountpoint, "/org/freedesktop/tracker")
+    subprocess.call(["tracker-control", "-s"])
+	
+def _close_tracker(mountpoint):
+    subprocess.call(["tracker-control", "-k", "all"])
+    _unlink_confdir(mountpoint, ".cache/tracker")
+    _unlink_confdir(mountpoint, ".config/tracker")
+    _unlink_confdir(mountpoint, ".local/share/tracker")
+    _save_dconf(mountpoint, "/org/freedesktop/tracker")
+    subprocess.call(["tracker-control", "-s"])
+	
 def _check_new_version(mountpoint):
     if os.path.exists("%s/.evolution" % mountpoint) and not \
         os.path.exists("%s/.local/share/evolution" % mountpoint):
@@ -793,8 +809,8 @@ def _check_new_version(mountpoint):
     else:
         return True
 
-def ext_tc_open(mountpoint, dmname):
-    """ open an extended TrueCrypt volume """
+def extvol_open(mountpoint, dmname):
+    """ open an extended volume """
     global pyn
     syslog.syslog(syslog.LOG_DEBUG, "Opening volume at %s as extended volume" % \
                                     mountpoint.encode('ascii', 'replace'))
@@ -850,6 +866,7 @@ def ext_tc_open(mountpoint, dmname):
         _open_pulseaudio(mountpoint)
         _open_grsync(mountpoint)
         _open_kmymoney(mountpoint)
+        _open_tracker(mountpoint)
         syslog.syslog(syslog.LOG_DEBUG, "... done.")
 
         # gconf-dumper will save above gconf dumps every 5 minutes, so you
@@ -866,9 +883,10 @@ def ext_tc_open(mountpoint, dmname):
                "usbpendrive_unmount")
     pyn.show()
 
-def ext_tc_close(mountpoint):
+def extvol_close(mountpoint):
     """ Close an extended Volume """
     global pyn
+    mountpoint = mountpoint.rstrip('/')
     syslog.syslog(syslog.LOG_DEBUG, "Closing extended volume at %s" % \
                                     mountpoint.encode('ascii', 'replace'))
     if not os.path.ismount(mountpoint):
@@ -879,7 +897,7 @@ def ext_tc_close(mountpoint):
     syslog.syslog(syslog.LOG_DEBUG, "Looking for open files")
     openfiles = subprocess.Popen(["/usr/bin/sudo", "/usr/bin/lsof", "-w", "-F", "n"],
                                  stdout=subprocess.PIPE).communicate()[0]
-    openfiles = re.findall("^n(%s/(?!.local/share/hamster-applet|.local/share/evolution|.VirtualBox/VBoxSVC.log).*)$" % mountpoint, openfiles, re.MULTILINE)
+    openfiles = re.findall("^n(%s/(?!.local/share/hamster-applet|.local/share/evolution|.config/tracker|.cache/tracker|.local/share/tracker|.VirtualBox/VBoxSVC.log).*)$" % mountpoint, openfiles, re.MULTILINE)
     if len(openfiles) > 0:
         message = (_("There are still open files on %s, listed below. Please close them first.\n\n") % mountpoint + '\n')
         message += '\n'.join(openfiles)
@@ -910,6 +928,7 @@ def ext_tc_close(mountpoint):
     _close_pulseaudio(mountpoint)
     _close_grsync(mountpoint)
     _close_kmymoney(mountpoint)
+    _close_tracker(mountpoint)
 
     subprocess.call(["/usr/bin/killall", "gconfd-2"])
     #backupmp = _open_backup_container(mountpoint)
@@ -923,13 +942,15 @@ def ext_tc_close(mountpoint):
     vm = Gio.VolumeMonitor.get()
     for mount in vm.get_mounts():
         if mount.get_root().get_path() == mountpoint:
-            syslog.syslog(syslog.LOG_DEBUG, "Unmounting %s" % mountpoint)
+            syslog.syslog(syslog.LOG_DEBUG, "Unmounting %s" % mountpoint.encode('ascii', 'replace'))
             try:
                 mount.unmount(0, None, None, None)
             except:
                 syslog.syslog(syslog.LOG_DEBUG, "Unmount failed!")
                 show_error(_("Unmounting the volume at %s failed!") % mountpoint)
-            break
+            else:
+                pyn.update(_("Closing successful"), _("Extended volume closed successfully!"), "usbpendrive_unmount")
+                pyn.show()
 
 if __name__ == "__main__":
     print "This module cannot be called directly"

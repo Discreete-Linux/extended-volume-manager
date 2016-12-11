@@ -23,7 +23,8 @@ def _write_dump(arg1=None, arg2=None):
                   "/org/gnome/desktop/session", "/org/gnome/settings-daemon/peripherals/mouse",
                   "/org/gnome/settings-daemon/peripherals/touchpad",
                   "/org/gnome/settings-daemon/peripherals/keyboard",
-                  "/apps/onboard", "/org/gnome/libgnomekbd")
+                  "/apps/onboard", "/org/gnome/libgnomekbd",
+                  "/org/freedesktop/tracker")
 
     syslog.syslog(syslog.LOG_DEBUG, "Saving GConf data.")
     for gconfdump in gconfdumps:
