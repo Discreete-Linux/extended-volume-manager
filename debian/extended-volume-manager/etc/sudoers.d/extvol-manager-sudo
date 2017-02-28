@@ -1,3 +1,0 @@
-%users ALL=(ALL) NOPASSWD: /usr/bin/lsof -w -F n
-%users ALL=(ALL) NOPASSWD: /usr/bin/lsof -w /media/*
-%users ALL=(ALL) NOPASSWD: /usr/bin/tc-backup-signature *

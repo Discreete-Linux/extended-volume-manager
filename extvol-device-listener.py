@@ -2,14 +2,20 @@
 # Encoding: UTF-8
 
 import os.path
+import gettext
 from gi.repository import GObject, Gio
 from dbus.mainloop.glib import DBusGMainLoop
 import extvolmanager
+
+gettext.install("extended-volume-manager", unicode=1)
 
 class ExtvolDeviceListener(object):
     def mount_added(self, obj, data):
         mountpoint = data.get_root().get_path().rstrip('/')
         device = data.get_volume().get_identifier("unix-device")
+        fs = extvolmanager.getFilesystem(mountpoint)
+        if fs.startswith("ext"):
+			extvolmanager.fixPermissions(mountpoint)
         if device.startswith("/dev/dm-") and os.path.exists(os.path.join(mountpoint, ".extended_volume")):
             if extvolmanager.ask_user(_("Extended volume"),
                                       _("This appears to be an extended Volume. "

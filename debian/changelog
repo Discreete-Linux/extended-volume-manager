@@ -1,3 +1,16 @@
+extended-volume-manager (0.4) unstable; urgency=medium
+
+  * Added fix permissions on ext filesystems
+  * Added icedove
+
+ -- Discreete Linux Team <info@discreete-linux.org>  Thu, 09 Feb 2017 15:18:01 +0100
+
+extended-volume-manager (0.3) unstable; urgency=medium
+
+  * Bugfixes
+
+ -- Discreete Linux Team <info@discreete-linux.org>  Mon, 12 Dec 2016 10:45:21 +0100
+
 extended-volume-manager (0.2) unstable; urgency=medium
 
   * Added Tracker support

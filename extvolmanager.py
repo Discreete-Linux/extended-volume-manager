@@ -74,6 +74,11 @@ class PBarThread(threading.Thread):
     def stopped(self):
         return self._stop.isSet()
 
+def _double_fork(cmd):
+    """ Execute child process with double fork. """
+    args = "import subprocess\nsubprocess.Popen(" +str(cmd) + ")"
+    subprocess.Popen(["/usr/bin/python", "-c", args])
+
 def start_with_pbar(args, title, message):
     win = Gtk.Window()
     vbox = Gtk.VBox(homogeneous=True, spacing=10)
@@ -153,6 +158,15 @@ def getFilesystem(path):
     except:
         pass
     return fs
+    
+def fixPermissions(path):
+    try:
+        syslog.syslog(syslog.LOG_DEBUG, "Setting permissions on %s" % path)
+        subprocess.call(["/usr/bin/sudo", "/bin/chown", "-R",
+                         "%s:%s" % (str(os.getuid()), str(os.getgid())), path])
+        subprocess.call(["/usr/bin/sudo", "/bin/chmod", "-R", "a+rwX", path])
+    except:
+        show_error(_("Could not set permissions and/or ownership on %s") % path)
 
 def _is_backup_device(device):
     args = ["/usr/bin/sudo", "/usr/bin/tc-backup-signature", device]
@@ -351,20 +365,20 @@ def _backup_other_containers(exttcdev, backupmp):
 def _link_confdir(mountpoint, confdir):
     try:
         syslog.syslog(syslog.LOG_DEBUG, "Configuration directory %s" % confdir)
-        if not os.path.exists("%s/%s" % (mountpoint, confdir)):
-            fileutils.mkdir_p("%s/%s" % (mountpoint, confdir))
-        if not os.path.exists("%s/%s" % (os.environ["HOME"], os.path.dirname(confdir))):
-            fileutils.mkdir_p("%s/%s" % (os.environ["HOME"], os.path.dirname(confdir)))
-        if os.path.lexists("%s/%s" % (os.environ["HOME"], confdir)):
-            if os.path.lexists("%s/%s.old" % (os.environ["HOME"], confdir)):
+        if not os.path.exists(os.path.join(mountpoint, confdir)):
+            fileutils.mkdir_p(os.path.join(mountpoint, confdir))
+        if not os.path.exists(os.path.join(os.environ["HOME"], os.path.dirname(confdir))):
+            fileutils.mkdir_p(os.path.join(os.environ["HOME"], os.path.dirname(confdir)))
+        if os.path.lexists(os.path.join(os.environ["HOME"], confdir)):
+            if os.path.lexists(os.path.join(os.environ["HOME"], confdir + ".old")):
                 i = 2
-                while os.path.lexists("%s/%s.old-%s" % (os.environ["HOME"], confdir, str(i))):
+                while os.path.lexists(os.path.join(os.environ["HOME"], confdir + ".old-" + str(i))):
                     i = i+1
-                os.rename("%s/%s.old" % (os.environ["HOME"], confdir),
-                          "%s/%s.old-%s" % (os.environ["HOME"], confdir, str(i)))
-            os.rename("%s/%s" % (os.environ["HOME"], confdir),
-                      "%s/%s.old" % (os.environ["HOME"], confdir))
-        os.symlink("%s/%s" % (mountpoint, confdir), "%s/%s" % (os.environ["HOME"], confdir))
+                os.rename(os.path.join(os.environ["HOME"], confdir + ".old"),
+                          os.path.join(os.environ["HOME"], confdir + ".old-" + str(i)))
+            os.rename(os.path.join(os.environ["HOME"], confdir),
+                      os.path.join(os.environ["HOME"], confdir + ".old"))
+        os.symlink(os.path.join(mountpoint, confdir), os.path.join(os.environ["HOME"], confdir))
     except:
         show_error(variables=vars())
         return False
@@ -372,11 +386,11 @@ def _link_confdir(mountpoint, confdir):
 def _unlink_confdir(mountpoint, confdir):
     syslog.syslog(syslog.LOG_DEBUG, "Configuration directory %s" % confdir)
     try:
-        if os.path.islink("%s/%s" % (os.environ["HOME"], confdir)):
-            os.remove("%s/%s" % (os.environ["HOME"], confdir))
-        if os.path.exists("%s/%s.old" % (os.environ["HOME"], confdir)):
-            os.rename("%s/%s.old" % (os.environ["HOME"], confdir),
-                      "%s/%s" % (os.environ["HOME"], confdir))
+        if os.path.islink(os.path.join(os.environ["HOME"], confdir)):
+            os.remove(os.path.join(os.environ["HOME"], confdir))
+        if os.path.exists(os.path.join(os.environ["HOME"], confdir + ".old")):
+            os.rename(os.path.join(os.environ["HOME"], confdir + ".old"),
+                      os.path.join(os.environ["HOME"], confdir))
     except:
         show_error(variables=vars())
         return False
@@ -387,20 +401,20 @@ def _link_conffile(mountpoint, conffile):
         destfile = '.' + destfile
     try:
         syslog.syslog(syslog.LOG_DEBUG, "Configuration file %s" % conffile)
-        if not os.path.exists("%s/%s" % (mountpoint, destfile)):
-            os.mknod("%s/%s" % (mountpoint.encode('utf-8'), destfile))
-        if not os.path.exists("%s/%s" % (os.environ["HOME"], os.path.dirname(conffile))):
-            fileutils.mkdir_p("%s/%s" % (os.environ["HOME"], os.path.dirname(conffile)))
-        if os.path.lexists("%s/%s" % (os.environ["HOME"], conffile)):
-            if os.path.exists("%s/%s.old" % (os.environ["HOME"], conffile)):
+        if not os.path.exists(os.path.join(mountpoint, destfile)):
+            os.mknod(os.path.join(mountpoint.encode('utf-8'), destfile))
+        if not os.path.exists(os.path.join(os.environ["HOME"], os.path.dirname(conffile))):
+            fileutils.mkdir_p(os.path.join(os.environ["HOME"], os.path.dirname(conffile)))
+        if os.path.lexists(os.path.join(os.environ["HOME"], conffile)):
+            if os.path.exists(os.path.join(os.environ["HOME"], conffile + ".old")):
                 i = 2
-                while os.path.exists("%s/%s.old-%s" % (os.environ["HOME"], conffile, str(i))):
+                while os.path.exists(os.path.join(os.environ["HOME"], conffile + ".old-" + str(i))):
                     i = i+1
-                os.rename("%s/%s.old" % (os.environ["HOME"], conffile),
-                          "%s/%s.old-%s" % (os.environ["HOME"], conffile, str(i)))
-            os.rename("%s/%s" % (os.environ["HOME"], conffile),
-                      "%s/%s.old" % (os.environ["HOME"], conffile))
-        os.symlink("%s/%s" % (mountpoint, destfile), "%s/%s" % (os.environ["HOME"], conffile))
+                os.rename(os.path.join(os.environ["HOME"], conffile + ".old"),
+                          os.path.join % (os.environ["HOME"], conffile + ".old-" + str(i)))
+            os.rename(os.path.join(os.environ["HOME"], conffile),
+                      os.path.join(os.environ["HOME"], conffile + ".old"))
+        os.symlink(os.path.join(mountpoint, destfile), os.path.join(os.environ["HOME"], conffile))
     except:
         show_error(variables=vars())
         return False
@@ -408,11 +422,11 @@ def _link_conffile(mountpoint, conffile):
 def _unlink_conffile(mountpoint, conffile):
     syslog.syslog(syslog.LOG_DEBUG, "Configuration file %s" % conffile)
     try:
-        if os.path.islink("%s/%s" % (os.environ["HOME"], conffile)):
-            os.remove("%s/%s" % (os.environ["HOME"], conffile))
-        if os.path.exists("%s/%s.old" % (os.environ["HOME"], conffile)):
-            os.rename("%s/%s.old" % (os.environ["HOME"], conffile),
-                      "%s/%s" % (os.environ["HOME"], conffile))
+        if os.path.islink(os.path.join(os.environ["HOME"], conffile)):
+            os.remove(os.path.join(os.environ["HOME"], conffile))
+        if os.path.exists(os.path.join(os.environ["HOME"], conffile + ".old")):
+            os.rename(os.path.join(os.environ["HOME"], conffile + ".old"),
+                      os.path.join(os.environ["HOME"], conffile))
     except:
         show_error(variables=vars())
         return False
@@ -462,11 +476,11 @@ def _save_dconf(mountpoint, dconfkey):
 
 def _migrate_confdir(mountpoint, oldpath, newpath):
     try:
-        if os.path.exists("%s/%s" % (mountpoint, oldpath)):
-            if not os.path.exists("%s/%s" % (mountpoint, newpath)):
+        if os.path.exists(os.path.join(mountpoint, oldpath)):
+            if not os.path.exists(os.path.join(mountpoint, newpath)):
                 syslog.syslog(syslog.LOG_DEBUG,
                               "Migrating old directory %s to new directory %s" % (oldpath, newpath))
-                shutil.copytree("%s/%s" % (mountpoint, oldpath), "%s/%s" % (mountpoint, newpath))
+                shutil.copytree(os.path.join(mountpoint, oldpath), os.path.join(mountpoint, newpath))
     except:
         return False
 
@@ -775,15 +789,25 @@ def _open_tracker(mountpoint):
     _link_confdir(mountpoint, ".local/share/tracker")
     _load_dconf(mountpoint, "/org/freedesktop/tracker")
     subprocess.call(["tracker-control", "-s"])
-	
+    
 def _close_tracker(mountpoint):
     subprocess.call(["tracker-control", "-k", "all"])
+    _double_fork(["/usr/bin/gnome-shell", "--replace"])
     _unlink_confdir(mountpoint, ".cache/tracker")
     _unlink_confdir(mountpoint, ".config/tracker")
     _unlink_confdir(mountpoint, ".local/share/tracker")
     _save_dconf(mountpoint, "/org/freedesktop/tracker")
     subprocess.call(["tracker-control", "-s"])
-	
+    
+def _open_icedove(mountpoint):
+    if not os.path.exists(os.path.join(mountpoint, ".icedove")):
+        if os.path.exists("/etc/skel/.icedove"):
+            shutil.copytree("/etc/skel/.icedove", os.path.join(mountpoint, ".icedove"))
+    _link_confdir(mountpoint, ".icedove")
+    
+def _close_icedove(mountpoint):
+    _unlink_confdir(mountpoint, ".icedove")
+    
 def _check_new_version(mountpoint):
     if os.path.exists("%s/.evolution" % mountpoint) and not \
         os.path.exists("%s/.local/share/evolution" % mountpoint):
@@ -866,6 +890,7 @@ def extvol_open(mountpoint, dmname):
         _open_pulseaudio(mountpoint)
         _open_grsync(mountpoint)
         _open_kmymoney(mountpoint)
+        _open_icedove(mountpoint)
         _open_tracker(mountpoint)
         syslog.syslog(syslog.LOG_DEBUG, "... done.")
 
@@ -928,6 +953,7 @@ def extvol_close(mountpoint):
     _close_pulseaudio(mountpoint)
     _close_grsync(mountpoint)
     _close_kmymoney(mountpoint)
+    _close_icedove(mountpoint)
     _close_tracker(mountpoint)
 
     subprocess.call(["/usr/bin/killall", "gconfd-2"])

@@ -1,6 +1,0 @@
-for item in gnupg fpm local/share/hamster-applet local/share/evolution; do
-        if [ -h ~/.${item} ]; then rm ~/.${item}; fi
-        if [ -e ~/.${item}.old ]; then mv ~/.${item}.old ~/.${item}; fi
-done
-
-if [ -e ~/.mounted_as_extended_volume ]; then rm ~/.mounted_as_extended_volume; fi
