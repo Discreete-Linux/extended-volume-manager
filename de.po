@@ -7,9 +7,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: extended-volume-manager 0.1\n"
 "Report-Msgid-Bugs-To: info@discreete-linux.org\n"
-"POT-Creation-Date: 2016-11-02 14:18+0100\n"
-"PO-Revision-Date: 2016-11-02 14:19+0100\n"
-"Last-Translator: UPR Team <info@privacy-cd.org>\n"
+"POT-Creation-Date: 2017-03-02 11:12+0100\n"
+"PO-Revision-Date: 2017-03-02 11:16+0100\n"
+"Last-Translator: Discreete Linux Team <info@discreete-linux.org>\n"
 "Language-Team: LANGUAGE <de@li.org>\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
@@ -17,7 +17,31 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 1.6.10\n"
 
-#: extvolmanager.py:104
+#: extvol-device-listener.py:20
+msgid "Extended volume"
+msgstr "Erweiterter Container"
+
+#: extvol-device-listener.py:21
+msgid ""
+"This appears to be an extended Volume. Do you want to make use of the "
+"settings stored therein?"
+msgstr ""
+"Dies scheint ein erweiterter Container zu sein. Wollen Sie die darin "
+"gespeicherten Einstellungen benutzen?"
+
+#: extvol-close:14
+msgid "Too many arguments."
+msgstr "Zu viele Argumente."
+
+#: extvol-manager.py:60
+msgid "Close extended volume"
+msgstr "Erweiterten Container schließen"
+
+#: extvol-manager.py:62
+msgid "Closes and Unmounts the selected extended Volume"
+msgstr "Schließt des ausgewählten erweiterten Container"
+
+#: extvolmanager.py:112
 #, python-format
 msgid ""
 "A system error occured. The error was\n"
@@ -34,11 +58,16 @@ msgstr ""
 "Lokale Variablen:\n"
 "%(vars)s"
 
-#: extvolmanager.py:190 extvolmanager.py:211
+#: extvolmanager.py:169
+#, python-format
+msgid "Could not set permissions and/or ownership on %s"
+msgstr "Konnte Rechte und/oder Eigentümer auf %s nicht setzen"
+
+#: extvolmanager.py:205 extvolmanager.py:226
 msgid "Do you want to da a backup?"
 msgstr "Wollen Sie ihre Daten sichern?"
 
-#: extvolmanager.py:191
+#: extvolmanager.py:206
 #, python-format
 msgid ""
 "It looks like you have a backup container/volume mounted at /media/backup. "
@@ -48,7 +77,7 @@ msgstr ""
 "geöffnet. Soll er für eine Sicherung der Daten im Container %s verwendet "
 "werden?"
 
-#: extvolmanager.py:203
+#: extvolmanager.py:218
 msgid ""
 "More than one possible backup container or device was found. Automatic "
 "backup cannot continue. Please make sure only one backup container or device "
@@ -62,7 +91,7 @@ msgstr ""
 "\n"
 "Ich habe folgende Geräte und Container gefunden:\n"
 
-#: extvolmanager.py:212
+#: extvolmanager.py:227
 #, python-format
 msgid ""
 "%(backupname)s looks like an encrypted backup container. Do you want to use "
@@ -74,7 +103,7 @@ msgstr ""
 "Wenn Sie mit \"OK\" antworten, müssen Sie im nächsten Schritt das Passwort "
 "für den Container %(backupname)s eingeben"
 
-#: extvolmanager.py:224
+#: extvolmanager.py:239
 #, python-format
 msgid ""
 "%(backupname)s is not an \"extended volume\" and can therefore not be used "
@@ -88,15 +117,15 @@ msgstr ""
 "Container\" oder legen Sie einen neuen, ext3-formatierten Backup-Container "
 "mit dem Namen backup.tc an."
 
-#: extvolmanager.py:235
+#: extvolmanager.py:250
 msgid "Unmounting"
 msgstr "Aushängen"
 
-#: extvolmanager.py:235
+#: extvolmanager.py:250
 msgid "Please wait until all data has been written to disk..."
 msgstr "Bitte warten, bis alle Daten auf Datenträger geschrieben wurden..."
 
-#: extvolmanager.py:254
+#: extvolmanager.py:269
 msgid ""
 "An error occured during backup!\n"
 "Could not create target directory."
@@ -104,40 +133,40 @@ msgstr ""
 "Beim Backup ist ein Fehler aufgetreten!\n"
 "Konnte Zielverzeichnis nicht erstellen."
 
-#: extvolmanager.py:270
+#: extvolmanager.py:285
 msgid "An error occured during backup. Error occured while executing gtkrsync!"
 msgstr ""
 "Beim Backup ist ein Fehler aufgetreten!\n"
 "Ein Fehler trat auf beim Ausführen von gtkrsync!"
 
-#: extvolmanager.py:278 extvolmanager.py:303
+#: extvolmanager.py:293 extvolmanager.py:318
 #, python-format
 msgid "Could not delete incomplete backup at %s"
 msgstr "Konnte unvollständiges Backup auf %s nicht löschen"
 
-#: extvolmanager.py:283
+#: extvolmanager.py:298
 msgid "Cleaning up"
 msgstr "Aufräumen"
 
-#: extvolmanager.py:283
+#: extvolmanager.py:298
 msgid "Old backups are being cleaned up, please wait..."
 msgstr "Alte Backups werden aufgeräumt, bitte warten..."
 
-#: extvolmanager.py:290
+#: extvolmanager.py:305
 #, python-format
 msgid "Could not delete old backup at %s"
 msgstr "Konnte altes Backup auf %s nicht löschen"
 
-#: extvolmanager.py:293
+#: extvolmanager.py:308
 msgid "Backup done."
 msgstr "Backup abgeschlossen."
 
-#: extvolmanager.py:294
+#: extvolmanager.py:309
 #, python-format
 msgid "Backup of %s successful."
 msgstr "Backup von %s erfolgreich."
 
-#: extvolmanager.py:298
+#: extvolmanager.py:313
 msgid ""
 "An error occured during backup!\n"
 "Maybe there is not enough space at the destination."
@@ -145,11 +174,11 @@ msgstr ""
 "Beim Backup ist ein Fehler aufgetreten!\n"
 "Eventuell ist am Ziel nicht genügend Platz."
 
-#: extvolmanager.py:336
+#: extvolmanager.py:351
 msgid "Backup other containers?"
 msgstr "Andere Container sichern?"
 
-#: extvolmanager.py:337
+#: extvolmanager.py:352
 #, python-format
 msgid ""
 "You can now backup your other open containers as well. Their contents will "
@@ -164,7 +193,7 @@ msgstr ""
 "\n"
 "Hinweis: Der Backup-Container hat noch %s frei."
 
-#: extvolmanager.py:526
+#: extvolmanager.py:540
 msgid ""
 "Failed to stop evolution, will skip loading evolution data from the extended "
 "container!"
@@ -172,7 +201,7 @@ msgstr ""
 "Konnte Evolution nicht anhalten, überspringe das Laden der Evolution-Daten "
 "vom erweiterten Container!"
 
-#: extvolmanager.py:709
+#: extvolmanager.py:719
 #, python-format
 msgid ""
 "Multiple virtual machines were found on %s, don't know which one to start. "
@@ -181,11 +210,11 @@ msgstr ""
 "Mehrere virtuelle Maschinen wurden auf %s gefunden, weiss nicht welche "
 "gestartet werden soll. Bitte manuell starten."
 
-#: extvolmanager.py:713
+#: extvolmanager.py:723
 msgid "Start Virtual Machine?"
 msgstr "Virtuelle Maschine starten?"
 
-#: extvolmanager.py:714
+#: extvolmanager.py:724
 #, python-format
 msgid ""
 "A virtual machine named \n"
@@ -196,7 +225,7 @@ msgstr ""
 "%s\n"
 "wurde gefunden. Soll sie gestartet werden?"
 
-#: extvolmanager.py:719
+#: extvolmanager.py:729
 #, python-format
 msgid ""
 "An error occured trying to start the virtual machine:\n"
@@ -206,15 +235,22 @@ msgstr ""
 "%s\n"
 "zu starten."
 
-#: extvolmanager.py:778
+#: extvolmanager.py:817
+msgid "An error occured while checking the backup configuration."
+msgstr "Ein Fehler trat auf bei der Prüfung der Backup-Einstellungen."
+
+#: extvolmanager.py:825
+msgid "An error occured while trying to run a (last) snapshot."
+msgstr ""
+"Ein Fehler trat auf beim Versuch, einen (letzten) Schnappschuss zu erstellen."
+
+#: extvolmanager.py:829
 msgid ""
 "You seem to be opening this extended container for the first time with this "
 "version. Please be aware of the following:\n"
 "* Evolution data cannot be migrated. Please open with the old version "
 "instead, make a data backup within evolution and restore it using this new "
 "version.\n"
-"* The Hamster Time Tracking database will be converted and cannot be opened "
-"with older versions afterwards.\n"
 "* The password manager database will be converted and cannot be opened with "
 "older versions afterwards.\n"
 "* Some seahorse settings cannot be migrated and need tobe re-done. This does "
@@ -230,8 +266,6 @@ msgstr ""
 "* Evolution-Daten können nicht übernommen werden. Bitte statt dessen mit der "
 "alten Version öffnen, in Evolution eine Datensicherung durchführen und diese "
 "in der neuen Version importieren.\n"
-"* Die Hamster Zeiterfassungs-Datenbank wird konvertiert und kann danach mit "
-"älteren Versionen u.U. nicht mehr geöffnet werden.\n"
 "* Die Passwort-Manager-Datenbank wird konvertiert und kann danach mit "
 "älteren Versionen u.U. nicht mehr geöffnet werden.\n"
 "* Einige Einstellungen der Schlüsselverwaltung Seahorse können nicht "
@@ -243,11 +277,11 @@ msgstr ""
 "\n"
 "<b>Wollen Sie fortfahren und diesen erweiterten Container öffnen?</b>"
 
-#: extvolmanager.py:796
+#: extvolmanager.py:845
 msgid "New Version"
 msgstr "Neue Version"
 
-#: extvolmanager.py:808
+#: extvolmanager.py:857
 msgid ""
 "Either this is not an extended volume, or there is already another extended "
 "volume mounted. There can only be one extended volume mounted at a time."
@@ -256,11 +290,11 @@ msgstr ""
 "anderer erweiterter Container eingehängt. Es kann immer nur ein erweiterter "
 "Container gleichzeitig eingehängt sein."
 
-#: extvolmanager.py:820
+#: extvolmanager.py:869
 msgid "Low free space"
 msgstr "Wenig freier Speicherplatz"
 
-#: extvolmanager.py:821
+#: extvolmanager.py:870
 #, python-format
 msgid ""
 "There are only %(freebytes)s free on %(volume)s. This may cause problems "
@@ -276,24 +310,23 @@ msgstr ""
 "\n"
 "Jetz abbrechen?"
 
-#: extvolmanager.py:837 extvolmanager.py:894
+#: extvolmanager.py:886 extvolmanager.py:945
 msgid "Please wait..."
 msgstr "Bitte warten..."
 
-#: extvolmanager.py:838
+#: extvolmanager.py:887
 msgid "Extended volume is being opened, please wait!"
 msgstr "Erweiterter Container wird geöffnet, bitte warten!"
 
-#: extvolmanager.py:870
+#: extvolmanager.py:920
 msgid "Opening successful"
 msgstr "Öffnen erfolgreich"
 
-#: extvolmanager.py:871
-#, python-format
-msgid "Extended volume %s opened successfully."
-msgstr "Erweiterter Container %s wurde erfolgreich geöffnet."
+#: extvolmanager.py:921
+msgid "Extended volume opened successfully."
+msgstr "Erweiterter Container wurde erfolgreich geöffnet."
 
-#: extvolmanager.py:888
+#: extvolmanager.py:941
 #, python-format
 msgid ""
 "There are still open files on %s, listed below. Please close them first.\n"
@@ -303,9 +336,22 @@ msgstr ""
 "zuerst schließen und erneut versuchen.\n"
 "\n"
 
-#: extvolmanager.py:895
+#: extvolmanager.py:945
 msgid "Extended volume is being closed, please wait!"
 msgstr "Erweiterter Container wird geschlossen, bitte warten!"
+
+#: extvolmanager.py:991
+#, python-format
+msgid "Unmounting the volume at %s failed!"
+msgstr "Aushängen des Volumes auf %s fehlgeschlagen!"
+
+#: extvolmanager.py:993
+msgid "Closing successful"
+msgstr "Schließen erfolgreich"
+
+#: extvolmanager.py:993
+msgid "Extended volume closed successfully!"
+msgstr "Erweiterter Container wurde erfolgreich geschlossen."
 
 msgid "Extended volume listener"
 msgstr "Extended volume listener"

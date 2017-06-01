@@ -644,7 +644,8 @@ def _open_desktop(mountpoint):
     _load_dconf(mountpoint, "/org/gnome/settings-daemon/peripherals/mouse")
     _load_dconf(mountpoint, "/org/gnome/settings-daemon/peripherals/touchpad")
     _load_dconf(mountpoint, "/org/gnome/settings-daemon/peripherals/keyboard")
-    _link_confdir(mountpoint, ".fonts")
+    _migrate_confdir(mountpoint, ".fonts", ".local/share/fonts")
+    _link_confdir(mountpoint, ".local/share/fonts")
     _link_conffile(mountpoint, ".gtk-bookmarks")
     _link_conffile(mountpoint, ".lockpasswd")
     _load_dconf(mountpoint, "/org/gnome/desktop/background")
@@ -808,17 +809,40 @@ def _open_icedove(mountpoint):
 def _close_icedove(mountpoint):
     _unlink_confdir(mountpoint, ".icedove")
     
+def _open_backintime(mountpoint):
+    _link_confdir(mountpoint, ".config/backintime")
+    _link_confdir(mountpoint, ".local/share/backintime")
+    try:
+        subprocess.call(["/usr/bin/backintime", "check-config"])
+    except:
+        show_error(_("An error occured while checking the backup configuration."))
+    
+def _close_backintime(mountpoint):
+    _unlink_confdir(mountpoint, ".config/backintime")
+    _unlink_confdir(mountpoint, ".local/share/backintime")
+    try:
+        subprocess.call(["/usr/bin/backintime", "backup"])
+    except:
+        show_error(_("An error occured while trying to run a (last) snapshot."))
+
+def _open_okular(mountpoint):
+	_link_conffile(mountpoint, ".kde/share/config/okularrc")
+	_link_conffile(mountpoint, ".kde/share/config/okularpartrc")    
+	_link_confdir(mountpoint, ".kde/share/apps/okular")
+
+def _close_okular(mountpoint):
+	_unlink_conffile(mountpoint, ".kde/share/config/okularrc")
+	_unlink_conffile(mountpoint, ".kde/share/config/okularpartrc")    
+	_unlink_confdir(mountpoint, ".kde/share/apps/okular")
+		
 def _check_new_version(mountpoint):
-    if os.path.exists("%s/.evolution" % mountpoint) and not \
-        os.path.exists("%s/.local/share/evolution" % mountpoint):
+    if os.path.exists("%s/.gnupg" % mountpoint) and not os.path.exists("%s/.icedove" % mountpoint):
         warnstring = _("You seem to be opening this extended container "\
             "for the first time with this version. Please be aware of "\
             "the following:\n"
             "* Evolution data cannot be migrated. Please open with " \
             "the old version instead, make a data backup within " \
             "evolution and restore it using this new version.\n" \
-            "* The Hamster Time Tracking database will be converted "\
-            "and cannot be opened with older versions afterwards.\n"\
             "* The password manager database will be converted "\
             "and cannot be opened with older versions afterwards.\n"\
             "* Some seahorse settings cannot be migrated and need to"\
@@ -892,6 +916,8 @@ def extvol_open(mountpoint, dmname):
         _open_kmymoney(mountpoint)
         _open_icedove(mountpoint)
         _open_tracker(mountpoint)
+        _open_backintime(mountpoint)
+        _open_okular(mountpoint)
         syslog.syslog(syslog.LOG_DEBUG, "... done.")
 
         # gconf-dumper will save above gconf dumps every 5 minutes, so you
@@ -957,6 +983,8 @@ def extvol_close(mountpoint):
     _close_tracker(mountpoint)
 
     subprocess.call(["/usr/bin/killall", "gconfd-2"])
+    _close_backintime(mountpoint)
+    _close_okular(mountpoint)
     #backupmp = _open_backup_container(mountpoint)
     #if backupmp:
     #    _do_backup(mountpoint, backupmp)

@@ -1,3 +1,9 @@
+extended-volume-manager (0.5) unstable; urgency=medium
+
+  * Add support for backintime
+
+ -- Discreete Linux Team <info@discreete-linux.org>  Thu, 02 Mar 2017 11:16:56 +0100
+
 extended-volume-manager (0.4) unstable; urgency=medium
 
   * Added fix permissions on ext filesystems
