@@ -4,9 +4,10 @@
 #
 ###
 # Standard-Variablen, die angepasst werden müssen
-PYMODS = fileutils.py extvolmanager.py
+PYEXEC = python3
+PYMODS = extvolmanager.py
 BINFILES =
-USRBINFILES = gconf-dumper.py vbox-starter.sh tc-backup-signature extvol-device-listener.py extvol-close
+USRBINFILES = gconf-dumper.py vbox-starter.sh extvol-device-listener.py extvol-close
 EXTENSIONS = extvol-manager.py
 MENUFILES = 
 EXTRATARGETS = 
@@ -15,7 +16,7 @@ EXTRAINSTALLS = sudo X11 xdgstart
 # Automatische Variablen
 NAME = $(shell grep '^Package: ' debian/control | sed 's/^Package: //')
 VERSION = $(shell grep '^Version: ' debian/control | sed 's/^Version: //')
-PYTHON_VERSION = $(shell python -V 2>&1 | cut -f 2 -d ' ')
+PYTHON_VERSION = $(shell $(PYEXEC) -V 2>&1 | cut -f 2 -d ' ')
 PYMINOR := $(shell echo $(PYTHON_VERSION) | cut -f 2 -d '.')
 PYMAJOR := $(shell echo $(PYTHON_VERSION) | cut -f 1 -d '.')
 BINDIR = $(DESTDIR)/bin

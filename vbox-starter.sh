@@ -25,7 +25,7 @@ VTX=off
 VPID=off
 VTXEXC=off
 NPAGING=off
-RESERVED_MEM=1024
+RESERVED_MEM=2048
 RESERVED_CPU=1
 
 # ggf. ueberschreiben der Standardwerte durch ~/.vbox-starter.conf

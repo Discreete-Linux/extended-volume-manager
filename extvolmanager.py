@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # Encoding: UTF-8
 """ Handle opening/closing of extended volumes """
 
@@ -16,11 +16,10 @@ import threading
 import multiprocessing
 import pickle
 import cups
-import pyudev
-import truecrypthelper
 try:
     import gi
     gi.require_version('Gtk', '3.0')
+    gi.require_version('Notify', '0.7')
     from gi.repository import Gtk, Notify, GLib, Gio
 except:
     pass
@@ -29,9 +28,8 @@ try:
     from vboxapi import VirtualBoxManager
 except:
     pass
-import fileutils
 
-gettext.install("extended-volume-manager", unicode=1)
+gettext.install("extended-volume-manager")
 Notify.init("extended-volume-manager")
 pyn = Notify.Notification()
 pyn.set_urgency(Notify.Urgency.NORMAL)
@@ -74,6 +72,18 @@ class PBarThread(threading.Thread):
     def stopped(self):
         return self._stop.isSet()
 
+def _chmod_R(mode, path):
+    """ Apply the given permissions recursively to the given path. The
+        "chmod" function documentation describes the mode argument.
+    """
+    if not os.path.exists(path):
+        raise OSError("no such file or directory: '%s'" % path)
+    os.chmod(path, mode)
+    if os.path.isdir(path):
+        child_paths = (os.path.join(path, c) for c in os.listdir(path))
+        for child_path in child_paths:
+            _chmod_R(mode, child_path)
+
 def _double_fork(cmd):
     """ Execute child process with double fork. """
     args = "import subprocess\nsubprocess.Popen(" +str(cmd) + ")"
@@ -92,7 +102,7 @@ def start_with_pbar(args, title, message):
     win.set_keep_above(True)
     win.set_title(title)
     win.show_all()
-    p = multiprocessing.Process(target=subprocess.call, args=(args,))
+    p = multiprocessing.Process(target=subprocess.run, args=(args,))
     p.start()
     while p.is_alive():
         pbar.pulse()
@@ -109,9 +119,11 @@ def show_error(message=None, variables=None):
     """ Display error messages """
     if message is None:
         syslog.syslog("Error: %s; Vars: %s" % (traceback.format_exc(), str(variables)))
-        message = _("A system error occured. The error was\n\n%(error)s\n\nLocal variables:\n%(vars)s") % {"error":traceback.format_exc(), "vars":str(variables)}
+        message = _("A system error occured. " \
+                    "The error was\n\n%(error)s\n\nLocal variables:\n%(vars)s") \
+                    % {"error":traceback.format_exc(), "vars":str(variables)}
     else:
-        syslog.syslog(message.encode('ascii', 'replace'))
+        syslog.syslog(message)
     dlg = Gtk.MessageDialog(type=Gtk.MessageType.ERROR, buttons=Gtk.ButtonsType.OK)
     dlg.format_secondary_text(message)
     dlg.run()
@@ -121,6 +133,7 @@ def show_error(message=None, variables=None):
     return
 
 def ask_user(title, message):
+    """ Ask user a Yes/No question with message """
     question = Gtk.MessageDialog(buttons=Gtk.ButtonsType.YES_NO, type=Gtk.MessageType.QUESTION)
     question.set_markup(_(message))
     question.set_title(title)
@@ -132,15 +145,6 @@ def ask_user(title, message):
     while Gtk.events_pending():
         Gtk.main_iteration()
     return response == Gtk.ResponseType.YES
-
-def _getUSBStorageList():
-    """ Get the list of USB storage device files """
-    usbList = list()
-    context = pyudev.Context()
-    for device in context.list_devices(subsystem='block', ID_BUS='usb'):
-        if device.device_type == "disk" or device.device_type == "sd_mmc":
-            usbList.append(device.device_node)
-    return usbList
 
 def getFilesystem(path):
     """ Return the filesystem of a mounted volume. """
@@ -158,217 +162,26 @@ def getFilesystem(path):
     except:
         pass
     return fs
-    
+
 def fixPermissions(path):
+    """ Make everything under path read/writable for the current user """
     try:
         syslog.syslog(syslog.LOG_DEBUG, "Setting permissions on %s" % path)
-        subprocess.call(["/usr/bin/sudo", "/bin/chown", "-R",
+        subprocess.run(["/usr/bin/sudo", "/bin/chown", "-R",
                          "%s:%s" % (str(os.getuid()), str(os.getgid())), path])
-        subprocess.call(["/usr/bin/sudo", "/bin/chmod", "-R", "a+rwX", path])
+        subprocess.run(["/usr/bin/sudo", "/bin/chmod", "-R", "a+rwX", path])
     except:
         show_error(_("Could not set permissions and/or ownership on %s") % path)
 
-def _is_backup_device(device):
-    args = ["/usr/bin/sudo", "/usr/bin/tc-backup-signature", device]
-    prog = subprocess.Popen(args)
-    ret = prog.wait()
-    return ret == 0
-
-def is_backup_device(devfile):
-    return _is_backup_device(devfile.rstrip("0123456789"))
-
-def _find_backup_devices():
-    """ Find all backup devices """
-    deviceList = list()
-    for device in _getUSBStorageList():
-        if _is_backup_device(device):
-            deviceList.append(device + "1")
-    return deviceList
-
-def _find_backup_containers():
-    """ Find all backup container files """
-    return glob.glob(u"/media/*/backup.tc")
-
-def _open_backup_container(mountpoint):
-    """ Find and open a backup container
-
-    Return mount point if backup container was successfully opened.
-    """
-    syslog.syslog(syslog.LOG_DEBUG, "Looking for backup container")
-    if mountpoint == "/media/backup":
-        syslog.syslog(syslog.LOG_DEBUG, "The backup container is the current "
-                                        "container, skipping backup.")
-        return False
-    if os.path.exists("/media/backup") and os.path.ismount("/media/backup"):
-        syslog.syslog(syslog.LOG_DEBUG, "Found already mounted backup "
-                                        "volume/container at /media/backup")
-        if ask_user(_('Do you want to da a backup?'),
-                    _("It looks like you have a backup container/volume mounted "
-                      "at /media/backup. Do you want to use it for a backup of "
-                      "your files in %s?") % mountpoint):
-            return "/media/backup"
-        else:
-            return False
-    backupcont = _find_backup_containers()
-    backupcont += _find_backup_devices()
-    if len(backupcont) == 0:
-        syslog.syslog(syslog.LOG_DEBUG, "No backup container found")
-        return False
-    elif len(backupcont) > 1:
-        message = _("More than one possible backup container or device was found. "
-                    "Automatic backup cannot continue. Please make sure only one "
-                    "backup container or device is present.\n\nI have found these "
-                    "containers and devices:\n")
-        message += '\n'.join(backupcont)
-        show_error(message)
-        return False
-    syslog.syslog(syslog.LOG_DEBUG, "Backup container found, asking user")
-    if not ask_user(_('Do you want to da a backup?'),
-                    _('%(backupname)s looks like an encrypted backup container. '
-                      'Do you want to use it for a backup of your files in %(origname)s? '
-                      'If you answer with \"OK\", you will have to enter the password '
-                      'for %(backupname)s in the next step.') % \
-                      {"backupname": backupcont[0], "origname": mountpoint}):
-        syslog.syslog(syslog.LOG_DEBUG, "User cancelled backup")
-        return False
-    if not truecrypthelper.tc_open(backupcont[0]):
-        syslog.syslog(syslog.LOG_DEBUG, "User cancelled opening backup container")
-        return False
-    backupfs = getFilesystem("/media/backup")
-    if "ext" not in backupfs:
-        show_error(_("%(backupname)s is not an \"extended volume\" and can therefore "
-                     "not be used for a backup.\nPlease convert %(backupname)s to an "
-                     "\"extended Volume\" or create a new, ext3 formatted backup volume "
-                     "with name backup.tc." % {"backupname": backupcont[0]}))
-        subprocess.call(["umount", "/media/backup"])
-        return False
-    return "/media/backup"
-
-def _close_backup_container(backupmp):
-    """ Close an open backup container """
-    syslog.syslog(syslog.LOG_DEBUG, "Closing backup container")
-    start_with_pbar(["/bin/sync"], _("Unmounting"), _("Please wait until all data "
-                                                      "has been written to disk..."))
-    subprocess.call(["umount", backupmp])
-
-def _do_backup(mountpoint, backupmp):
-    """ Do a backup of mountpoint to backup container """
-    global pyn
-    syslog.syslog(syslog.LOG_DEBUG,
-                  "Starting backup of %s" % mountpoint.encode('ascii', 'replace'))
-    mountpoint = mountpoint.rstrip('/')
-    backupdir = backupmp + "/" + os.path.basename(mountpoint) + "-Backup"
-    backupcur = backupdir + "/Backup_" + time.strftime("%y.%m.%d_%H%M")
-    try:
-        if not os.path.exists(backupdir):
-            os.makedirs(backupdir)
-        backuplist = os.listdir(backupdir)
-        backuplist.sort()
-        os.makedirs(backupcur)
-    except:
-        show_error(_("An error occured during backup!\nCould not create target directory."))
-        return False
-    #  If no backup exists yet, start this backup with a progress bar
-    if len(backuplist) == 0:
-        syslog.syslog(syslog.LOG_DEBUG, "Doing initial backup")
-        args = ["gtkrsync", "--progress", "-vrltD", "--delete", "--delete-before",
-                "--no-inc-recursive", mountpoint + "/", backupcur]
-    else:
-        syslog.syslog(syslog.LOG_DEBUG, "Doing incremental backup")
-        args = ["/usr/bin/gtkrsync", "--progress", "-vrltD", "--delete",
-                "--delete-before", "--no-inc-recursive", "--link-dest=%s" % \
-                backupdir + "/" + backuplist[-1], mountpoint + "/", backupcur]
-    syslog.syslog(syslog.LOG_DEBUG, "Calling rsync...")
-    try:
-        ret = subprocess.call(args)
-    except:
-        show_error(_("An error occured during backup. Error occured while executing gtkrsync!"))
-        return False
-    syslog.syslog(syslog.LOG_DEBUG, "Rsync returned %i" % ret)
-    if ret == 20:
-        syslog.syslog(syslog.LOG_DEBUG, "Rsync was cancelled, deleting current backup")
-        try:
-            shutil.rmtree(backupcur)
-        except:
-            show_error(_("Could not delete incomplete backup at %s") % backupcur)
-            return False
-        return False
-    elif ret == 0 or ret == 24:
-        syslog.syslog(syslog.LOG_DEBUG, "Backup successful, removing old backups.")
-        pb = PBarThread(_("Cleaning up"), _("Old backups are being cleaned up, please wait..."))
-        pb.start()
-        while len(backuplist) > 4:
-            oldbackup = backupdir + "/" + backuplist.pop(0)
-            try:
-                shutil.rmtree(oldbackup)
-            except:
-                show_error(_("Could not delete old backup at %s") % oldbackup)
-        pb.stop()
-        pb.join()
-        pyn.update(_("Backup done."), \
-                        _("Backup of %s successful.") % mountpoint, "usbpendrive_unmount")
-        pyn.show()
-        syslog.syslog(syslog.LOG_DEBUG, "All old backups removed")
-    else:
-        show_error(_("An error occured during backup!\nMaybe there is not enough "
-                     "space at the destination."))
-        try:
-            shutil.rmtree(backupcur)
-        except:
-            show_error(_("Could not delete incomplete backup at %s") % backupcur)
-            return False
-        return False
-    return True
-
-def _backup_other_containers(exttcdev, backupmp):
-    """ Does a backup of other open containers into the same backup container """
-    # TODO: needs re-implementation
-    syslog.syslog(syslog.LOG_DEBUG, "Looking for other containers to back up")
-    backup_others = ""
-
-    # Build a x*4 list of open TrueCrypt volumes, with
-    # tclist[x][0] = Slot number
-    # tclist[x][1] = filename
-    # tclist[x][2] = dm_device
-    # tclist[x][3] = mountpoint
-    tclines = subprocess.Popen(truecrypthelper.tct + ["-l"], \
-              stdout=subprocess.PIPE).communicate()[0]
-    p = re.findall("^([0-9]{1,2}): ((?:\'[^\']+\')|\S+) (\S+) ((?:\'[^\']+\')|\S+)",
-                   tclines, re.MULTILINE)
-    tclist = [[filter(lambda c: c not in "'", m) for m in i] for i in p]
-
-    for tcitem in tclist:
-        if (tcitem[2] == exttcdev) or (tcitem[3] == backupmp):
-            continue
-        target_mp = tcitem[3].decode('utf-8', 'replace')
-        syslog.syslog(syslog.LOG_DEBUG, "Found another container at %s" % target_mp)
-        if backup_others != "Yes":
-            s = os.statvfs(backupmp)
-            df = (s.f_bavail * s.f_frsize)
-            humanreadable = lambda s: [(s%1024**i and "%.1f"%(s/1024.0**i) or
-                                        str(s/1024**i))+x.strip() for i, x in
-                                       enumerate(' KMGTPEZY') if s < 1024**(i+1) or i == 8][0]
-            if ask_user(_("Backup other containers?"),
-                        _("You can now backup your other open containers as well. "
-                          "Their contents will be stored within the same backup "
-                          "container, but in a separate directory. Do you want to "
-                          "do this now?\n\nHint: The backup container has %s free space.") % \
-                          humanreadable(df)):
-                backup_others = "Yes"
-            else:
-                syslog.syslog(syslog.LOG_DEBUG, "User decided against backup")
-                return False
-        if backup_others == "Yes":
-            _do_backup(target_mp, backupmp)
-            subprocess.call(["umount", target_mp])
-
 def _link_confdir(mountpoint, confdir):
+    """ Create a symlink for a directory from /home/$USER/confdir to
+    mountpoint/confdir """
     try:
         syslog.syslog(syslog.LOG_DEBUG, "Configuration directory %s" % confdir)
         if not os.path.exists(os.path.join(mountpoint, confdir)):
-            fileutils.mkdir_p(os.path.join(mountpoint, confdir))
+            os.makedirs(os.path.join(mountpoint, confdir))
         if not os.path.exists(os.path.join(os.environ["HOME"], os.path.dirname(confdir))):
-            fileutils.mkdir_p(os.path.join(os.environ["HOME"], os.path.dirname(confdir)))
+            os.makedirs(os.path.join(os.environ["HOME"], os.path.dirname(confdir)))
         if os.path.lexists(os.path.join(os.environ["HOME"], confdir)):
             if os.path.lexists(os.path.join(os.environ["HOME"], confdir + ".old")):
                 i = 2
@@ -384,6 +197,7 @@ def _link_confdir(mountpoint, confdir):
         return False
 
 def _unlink_confdir(mountpoint, confdir):
+    """ Remove a symlink to a configuration directory from /home/$USER """
     syslog.syslog(syslog.LOG_DEBUG, "Configuration directory %s" % confdir)
     try:
         if os.path.islink(os.path.join(os.environ["HOME"], confdir)):
@@ -396,15 +210,17 @@ def _unlink_confdir(mountpoint, confdir):
         return False
 
 def _link_conffile(mountpoint, conffile):
+    """ Create a symlink for a file from /home/$USER/conffile to
+    mountpoint/conffile """
     destfile = os.path.basename(conffile)
     if not destfile.startswith('.'):
         destfile = '.' + destfile
     try:
         syslog.syslog(syslog.LOG_DEBUG, "Configuration file %s" % conffile)
         if not os.path.exists(os.path.join(mountpoint, destfile)):
-            os.mknod(os.path.join(mountpoint.encode('utf-8'), destfile))
+            os.mknod(os.path.join(mountpoint, destfile))
         if not os.path.exists(os.path.join(os.environ["HOME"], os.path.dirname(conffile))):
-            fileutils.mkdir_p(os.path.join(os.environ["HOME"], os.path.dirname(conffile)))
+            os.makedirs(os.path.join(os.environ["HOME"], os.path.dirname(conffile)))
         if os.path.lexists(os.path.join(os.environ["HOME"], conffile)):
             if os.path.exists(os.path.join(os.environ["HOME"], conffile + ".old")):
                 i = 2
@@ -420,6 +236,7 @@ def _link_conffile(mountpoint, conffile):
         return False
 
 def _unlink_conffile(mountpoint, conffile):
+    """ Remove a symlink to a configuration file from /home/$USER """
     syslog.syslog(syslog.LOG_DEBUG, "Configuration file %s" % conffile)
     try:
         if os.path.islink(os.path.join(os.environ["HOME"], conffile)):
@@ -435,7 +252,7 @@ def _load_gconf(mountpoint, gconfkey):
     try:
         if os.path.exists("%s/.%s-backup.xml.dump" % (mountpoint, gconfkey.rsplit('/', 1)[1])):
             syslog.syslog(syslog.LOG_DEBUG, "GConf key %s" % gconfkey)
-            subprocess.call(["/usr/bin/gconftool-2", "--load",
+            subprocess.run(["/usr/bin/gconftool-2", "--load",
                              "%s/.%s-backup.xml.dump" % (mountpoint, gconfkey.rsplit('/', 1)[1])])
     except:
         show_error(variables=vars())
@@ -445,7 +262,7 @@ def _save_gconf(mountpoint, gconfkey):
     try:
         dumpfile = open("%s/.%s-backup.xml.dump" % (mountpoint, gconfkey.rsplit('/', 1)[1]), 'w')
         syslog.syslog(syslog.LOG_DEBUG, "GConf key %s" % gconfkey)
-        subprocess.call(["/usr/bin/gconftool-2", "--dump", "%s" % gconfkey], stdout=dumpfile)
+        subprocess.run(["/usr/bin/gconftool-2", "--dump", "%s" % gconfkey], stdout=dumpfile)
         dumpfile.close()
     except:
         show_error(variables=vars())
@@ -456,7 +273,7 @@ def _load_dconf(mountpoint, dconfkey):
     try:
         if os.path.exists("%s/.%s-backup.txt.dump" % (mountpoint, dconfkey.rsplit('/', 1)[1])):
             syslog.syslog(syslog.LOG_DEBUG, "DConf key %s" % dconfkey)
-            subprocess.call(["/usr/bin/dconf", "load", "%s/" % dconfkey],
+            subprocess.run(["/usr/bin/dconf", "load", "%s/" % dconfkey],
                             stdin=open("%s/.%s-backup.txt.dump" % \
                             (mountpoint, dconfkey.rsplit('/', 1)[1]), 'r'))
     except:
@@ -468,7 +285,7 @@ def _save_dconf(mountpoint, dconfkey):
     try:
         dumpfile = open("%s/.%s-backup.txt.dump" % (mountpoint, dconfkey.rsplit('/', 1)[1]), 'w')
         syslog.syslog(syslog.LOG_DEBUG, "DConf key %s" % dconfkey)
-        subprocess.call(["/usr/bin/dconf", "dump", "%s/" % dconfkey], stdout=dumpfile)
+        subprocess.run(["/usr/bin/dconf", "dump", "%s/" % dconfkey], stdout=dumpfile)
         dumpfile.close()
     except:
         show_error(variables=vars())
@@ -488,12 +305,15 @@ def _open_gnupg(mountpoint):
     _link_confdir(mountpoint, ".gnupg")
     _load_dconf(mountpoint, "/apps/seahorse")
     try:
-        if os.path.exists(mountpoint + "/.gnupg"):
+        if os.path.exists(os.path.join(mountpoint, ".gnupg")):
             syslog.syslog(syslog.LOG_DEBUG, "Setting permissions on .gnupg")
-            fileutils.chmod_R("0700", mountpoint + "/.gnupg")
-        if not os.path.exists(mountpoint + "/.gnupg/gnupg-scripts.conf"):
+            _chmod_R(0o0700, os.path.join(mountpoint, ".gnupg"))
+        if not os.path.exists(os.path.join(mountpoint, ".gnupg", "gnupg-scripts.conf")):
             syslog.syslog(syslog.LOG_DEBUG, "Creating gnupg-scripts default configuration")
-            subprocess.call(["/usr/bin/gpg-config", "--default"])
+            subprocess.run(["/usr/bin/gpg-config", "--default"])
+        if not os.path.exists(os.path.join(mountpoint, ".gnupg", "gpg-agent.conf")):
+            syslog.syslog(syslog.LOG_DEBUG, "Copying default gpg-agent.conf")
+            shutil.copy("/etc/skel/.gnupg/gpg-agent.conf", os.path.join(mountpoint, ".gnupg"))
     except:
         show_error(variables=vars())
         return False
@@ -503,26 +323,29 @@ def _close_gnupg(mountpoint):
     _unlink_confdir(mountpoint, ".gnupg")
     try:
         syslog.syslog(syslog.LOG_DEBUG, "Reloading the gpg-agent")
-        subprocess.call(["/usr/bin/pkill", "-HUP", "gpg-agent"])
+        subprocess.run(["/usr/bin/pkill", "-HUP", "gpg-agent"])
     except:
         show_error(variables=vars())
         return False
 
 def _really_kill_evolution():
-    evoprocs = subprocess.Popen(["find", "/usr/lib/evolution", "-type", "f", "-and",
+    evoprocs = subprocess.run(["find", "/usr/lib/evolution", "-type", "f", "-and",
                                  "-executable", "-exec", "basename", "{}", ";"],
-                                stdout=subprocess.PIPE).communicate()[0]
+                                stdout=subprocess.PIPE, 
+                                universal_newlines=True).stdout
     evoprocs = evoprocs.replace('\n', ',') + 'evolution'
-    evopids = subprocess.Popen(["ps", "-C", evoprocs, "-o", "pid", "--no-headers"],
-                               stdout=subprocess.PIPE).communicate()[0]
+    evopids = subprocess.run(["ps", "-C", evoprocs, "-o", "pid", "--no-headers"],
+                               stdout=subprocess.PIPE,
+                               universal_newlines=True).stdout
     if len(evopids) == 0:
         return True
     evopids = evopids.strip().split('\n')
     for pid in evopids:
-        subprocess.call(["kill", pid])
-        subprocess.call(["kill", "-9", pid])
-    evopids = subprocess.Popen(["ps", "-C", evoprocs, "-o", "pid", "--no-headers"],
-                               stdout=subprocess.PIPE).communicate()[0]
+        subprocess.run(["kill", pid])
+        subprocess.run(["kill", "-9", pid])
+    evopids = subprocess.run(["ps", "-C", evoprocs, "-o", "pid", "--no-headers"],
+                               stdout=subprocess.PIPE,
+                               universal_newlines=True).stdout
     if len(evopids) > 0:
         return False
     else:
@@ -530,12 +353,8 @@ def _really_kill_evolution():
 
 def _open_evolution(mountpoint):
     syslog.syslog(syslog.LOG_DEBUG, "Shutting down evolution")
-    try:
-        subprocess.call(["/usr/bin/evolution", "--force-shutdown"],
-                        stdout=open(os.devnull, 'w'), stderr=subprocess.STDOUT)
-    except:
-        show_error(variables=vars())
-        return False
+    subprocess.run(["/usr/bin/evolution", "--force-shutdown"],
+                    stdout=open(os.devnull, 'w'), stderr=subprocess.STDOUT)
     if not _really_kill_evolution():
         show_error(_("Failed to stop evolution, will skip loading evolution data "
                      "from the extended container!"))
@@ -547,12 +366,8 @@ def _open_evolution(mountpoint):
 
 def _close_evolution(mountpoint):
     syslog.syslog(syslog.LOG_DEBUG, "Shutting down evolution")
-    try:
-        subprocess.call(["/usr/bin/evolution", "--force-shutdown"],
-                        stdout=open(os.devnull, 'w'), stderr=subprocess.STDOUT)
-    except:
-        show_error(variables=vars())
-        return False
+    subprocess.run(["/usr/bin/evolution", "--force-shutdown"],
+                    stdout=open(os.devnull, 'w'), stderr=subprocess.STDOUT)
     _really_kill_evolution()
     _save_gconf(mountpoint, "/apps/evolution")
     _unlink_confdir(mountpoint, ".local/share/evolution")
@@ -562,52 +377,52 @@ def _close_evolution(mountpoint):
 def _open_hamster(mountpoint):
     syslog.syslog(syslog.LOG_DEBUG, "Spawning the mighty hamster...")
     proclist = "hamster-service"
-    pids = subprocess.Popen(["/bin/ps", "--no-headers", "-o", "pid", "-C", proclist],
-                            stdout=subprocess.PIPE).communicate()[0]
+    pids = subprocess.run(["/bin/ps", "--no-headers", "-o", "pid", "-C", proclist],
+                          stdout=subprocess.PIPE, universal_newlines=True).stdout
     for pid in pids.split():
         try:
-            subprocess.call(["kill", pid])
-            subprocess.call(["kill", "-9", pid])
+            subprocess.run(["kill", pid])
+            subprocess.run(["kill", "-9", pid])
         except:
             pass
     _migrate_confdir(mountpoint, ".gnome2/hamster-applet", ".local/share/hamster-applet")
     _link_confdir(mountpoint, ".local/share/hamster-applet")
     _load_gconf(mountpoint, "/apps/hamster-applet")
-    # _load_gconf(mountpoint, "/apps/hamster-indicator")
     subprocess.Popen(["/usr/lib/hamster-applet/hamster-service"])
-    extlist = subprocess.Popen(["gsettings", "get", "org.gnome.shell", "enabled-extensions"],
-                               stdout=subprocess.PIPE).communicate()[0].strip('[').rstrip(']\n').split(', ')
+    extlist = subprocess.run(["gsettings", "get", "org.gnome.shell", "enabled-extensions"],
+                             stdout=subprocess.PIPE, 
+                             universal_newlines=True).stdout.strip('[]\n').split(', ')
     if "'hamster@projecthamster.wordpress.com'" not in extlist:
         extlist.append("'hamster@projecthamster.wordpress.com'")
-        subprocess.call(["gsettings", "set", "org.gnome.shell", "enabled-extensions",
+        subprocess.run(["gsettings", "set", "org.gnome.shell", "enabled-extensions",
                          "[" + ', '.join(extlist) + "]"])
 
 def _close_hamster(mountpoint):
     syslog.syslog(syslog.LOG_DEBUG, "Stopping hamster applet")
     _save_gconf(mountpoint, "/apps/hamster-applet")
-    # _save_gconf(mountpoint, "/apps/hamster-indicator")
     _unlink_confdir(mountpoint, ".local/share/hamster-applet")
     proclist = "hamster-service"
-    pids = subprocess.Popen(["/bin/ps", "--no-headers", "-o", "pid", "-C", proclist],
-                            stdout=subprocess.PIPE).communicate()[0]
+    pids = subprocess.run(["/bin/ps", "--no-headers", "-o", "pid", "-C", proclist],
+                          stdout=subprocess.PIPE, universal_newlines=True).stdout
     for pid in pids.split():
         try:
-            subprocess.call(["kill", pid])
-            subprocess.call(["kill", "-9", pid])
+            subprocess.run(["kill", pid])
+            subprocess.run(["kill", "-9", pid])
         except:
             pass
-    extlist = subprocess.Popen(["gsettings", "get", "org.gnome.shell", "enabled-extensions"],
-                               stdout=subprocess.PIPE).communicate()[0].strip('[').rstrip(']\n').split(', ')
+    extlist = subprocess.run(["gsettings", "get", "org.gnome.shell", "enabled-extensions"],
+                               stdout=subprocess.PIPE,
+                               universal_newlines=True).stdout.strip('[]\n').split(', ')
     if "'hamster@projecthamster.wordpress.com'" in extlist:
         extlist = [x for x in extlist if x != "'hamster@projecthamster.wordpress.com'"]
-        subprocess.call(["gsettings", "set", "org.gnome.shell", "enabled-extensions",
+        subprocess.run(["gsettings", "set", "org.gnome.shell", "enabled-extensions",
                          "[" + ', '.join(extlist) + "]"])
 
-def _open_fpm(mountpoint):
-    _link_confdir(mountpoint, ".fpm")
+def _open_keepass(mountpoint):
+    _link_confdir(mountpoint, ".config/KeePass")
 
-def _close_fpm(mountpoint):
-    _unlink_confdir(mountpoint, ".fpm")
+def _close_keepass(mountpoint):
+    _unlink_confdir(mountpoint, ".config/KeePass")
 
 def _open_libreoffice(mountpoint):
     _migrate_confdir(mountpoint, ".openoffice.org", ".config/libreoffice")
@@ -640,10 +455,7 @@ def _open_desktop(mountpoint):
     _load_dconf(mountpoint, "/org/gnome/settings-daemon/plugins/power")
     _load_dconf(mountpoint, "/org/gnome/desktop/session")
     _load_gconf(mountpoint, "/desktop/gnome/keybindings")
-    _load_gconf(mountpoint, "/apps/metacity")
-    _load_dconf(mountpoint, "/org/gnome/settings-daemon/peripherals/mouse")
-    _load_dconf(mountpoint, "/org/gnome/settings-daemon/peripherals/touchpad")
-    _load_dconf(mountpoint, "/org/gnome/settings-daemon/peripherals/keyboard")
+    _load_dconf(mountpoint, "/org/gnome/desktop/peripherals")
     _migrate_confdir(mountpoint, ".fonts", ".local/share/fonts")
     _link_confdir(mountpoint, ".local/share/fonts")
     _link_conffile(mountpoint, ".gtk-bookmarks")
@@ -656,17 +468,14 @@ def _close_desktop(mountpoint):
     _save_dconf(mountpoint, "/org/gnome/settings-daemon/plugins/power")
     _save_dconf(mountpoint, "/org/gnome/desktop/session")
     _save_gconf(mountpoint, "/desktop/gnome/keybindings")
-    _save_gconf(mountpoint, "/apps/metacity")
-    _save_dconf(mountpoint, "/org/gnome/settings-daemon/peripherals/mouse")
-    _save_dconf(mountpoint, "/org/gnome/settings-daemon/peripherals/touchpad")
-    _save_dconf(mountpoint, "/org/gnome/settings-daemon/peripherals/keyboard")
-    _unlink_confdir(mountpoint, ".fonts")
+    _save_dconf(mountpoint, "/org/gnome/desktop/peripherals")
+    _unlink_confdir(mountpoint, ".local/share/fonts")
     _unlink_conffile(mountpoint, ".gtk-bookmarks")
     _unlink_conffile(mountpoint, ".lockpasswd")
     _save_dconf(mountpoint, "/org/gnome/desktop/background")
     _save_dconf(mountpoint, "/org/gnome/nemo")
     _save_dconf(mountpoint, "/org/gnome/libgnomekbd")
-    subprocess.call(["/usr/bin/dconf", "reset", "-f", "/org/gnome/desktop/background/"])
+    subprocess.run(["/usr/bin/dconf", "reset", "-f", "/org/gnome/desktop/background/"])
 
 def _load_printers(mountpoint):
     if os.path.exists("%s/.cups/printers" % mountpoint):
@@ -720,7 +529,7 @@ def _open_vbox(mountpoint):
             show_error(_("Multiple virtual machines were found on %s, don't know "
                          "which one to start. Please start it manually.") % mountpoint)
         else:
-            vm = vmx[0].name.decode('utf-8', 'replace')
+            vm = vmx[0].name
             if ask_user(_("Start Virtual Machine?"),
                         _("A virtual machine named \n%s\n was found. Do you want "
                           "to start it?") % vm):
@@ -733,26 +542,32 @@ def _open_vbox(mountpoint):
 def _close_vbox(mountpoint):
     if "vboxapi" not in sys.modules:
         return True
-    subprocess.call(["pkill", "VBoxSVC"])
+    subprocess.run(["pkill", "VBoxSVC"])
     _unlink_confdir(mountpoint, ".VirtualBox")
     _unlink_confdir(mountpoint, "VirtualBox VMs")
     _unlink_conffile(mountpoint, ".vbox-starter.conf")
 
 def _open_pulseaudio(mountpoint):
     if not os.path.exists("%s/.config/pulse" % mountpoint):
-        fileutils.mkdir_p("%s/.config/pulse" % mountpoint)
+        os.makedirs("%s/.config/pulse" % mountpoint)
     else:
-        subprocess.call(["pulseaudio", "--kill"])
-        fileutils.rm_rf(glob.glob("%s/.config/pulse/*runtime" % mountpoint))
-        fileutils.cp(glob.glob("%s/.config/pulse/*" % mountpoint), "%s/.config/pulse" % os.environ["HOME"])
-        subprocess.call(["pulseaudio", "--start"])
+        subprocess.run(["pulseaudio", "--kill"])
+        for f in glob.glob("%s/.config/pulse/*runtime" % mountpoint):
+            try:
+                os.remove(f)
+            except:
+                pass
+        for f in glob.glob("%s/.config/pulse/*" % mountpoint):
+            shutil.copy2(f, "%s/.config/pulse" % os.environ["HOME"])
+        subprocess.run(["pulseaudio", "--start"])
 
 def _close_pulseaudio(mountpoint):
-    subprocess.call(["pulseaudio", "--kill"])
+    subprocess.run(["pulseaudio", "--kill"])
     files = glob.glob("%s/.config/pulse/*" % os.environ["HOME"])
     ffiles = [k for k in files if not k.endswith("runtime")]
-    fileutils.cp(ffiles, "%s/.config/pulse/" % mountpoint)
-    subprocess.call(["pulseaudio", "--start"])
+    for f in ffiles:
+        shutil.copy2(f, "%s/.config/pulse/" % mountpoint)
+    subprocess.run(["pulseaudio", "--start"])
 
 def _open_gimp(mountpoint):
     _link_confdir(mountpoint, ".gimp-2.8")
@@ -784,84 +599,121 @@ def _close_grsync(mountpoint):
     _unlink_confdir(mountpoint, ".grsync")
 
 def _open_tracker(mountpoint):
-    subprocess.call(["tracker-control", "-k", "all"])
+    subprocess.run(["tracker", "daemon", "-k", "all"], stdout=open(os.devnull, 'w'))
     _link_confdir(mountpoint, ".cache/tracker")
     _link_confdir(mountpoint, ".config/tracker")
     _link_confdir(mountpoint, ".local/share/tracker")
     _load_dconf(mountpoint, "/org/freedesktop/tracker")
-    subprocess.call(["tracker-control", "-s"])
-    
+    p = subprocess.run(["gsettings", "get", "org.freedesktop.Tracker.Miner.Files",
+                        "index-recursive-directories"],
+                       stdout=subprocess.PIPE, universal_newlines=True)
+    locs = p.stdout.strip('[]\n').split(', ')
+    mp = "'%s'" % mountpoint
+    if not mp in locs:
+        locs.append(mp)
+        subprocess.run(["gsettings", "set", "org.freedesktop.Tracker.Miner.Files",
+                        "index-recursive-directories", "[%s]" % ', '.join(locs)])
+    subprocess.run(["tracker", "daemon", "-s"], stdout=open(os.devnull, 'w'))
+
 def _close_tracker(mountpoint):
-    subprocess.call(["tracker-control", "-k", "all"])
-    _double_fork(["/usr/bin/gnome-shell", "--replace"])
+    subprocess.run(["tracker", "daemon", "-k", "all"], stdout=open(os.devnull, 'w'))
+    #_double_fork(["/usr/bin/gnome-shell", "--replace"])
     _unlink_confdir(mountpoint, ".cache/tracker")
     _unlink_confdir(mountpoint, ".config/tracker")
     _unlink_confdir(mountpoint, ".local/share/tracker")
     _save_dconf(mountpoint, "/org/freedesktop/tracker")
-    subprocess.call(["tracker-control", "-s"])
-    
-def _open_icedove(mountpoint):
-    if not os.path.exists(os.path.join(mountpoint, ".icedove")):
-        if os.path.exists("/etc/skel/.icedove"):
-            shutil.copytree("/etc/skel/.icedove", os.path.join(mountpoint, ".icedove"))
-    _link_confdir(mountpoint, ".icedove")
-    
-def _close_icedove(mountpoint):
-    _unlink_confdir(mountpoint, ".icedove")
-    
+    subprocess.run(["tracker", "daemon", "-s"], stdout=open(os.devnull, 'w'))
+
+def _open_thunderbird(mountpoint):
+    if not os.path.exists(os.path.join(mountpoint, ".thunderbird")):
+        if os.path.exists("/etc/skel/.thunderbird"):
+            shutil.copytree("/etc/skel/.thunderbird", 
+                            os.path.join(mountpoint, ".thunderbird"))
+    _link_confdir(mountpoint, ".thunderbird")
+
+def _close_thunderbird(mountpoint):
+    _unlink_confdir(mountpoint, ".thunderbird")
+
 def _open_backintime(mountpoint):
     _link_confdir(mountpoint, ".config/backintime")
     _link_confdir(mountpoint, ".local/share/backintime")
     try:
-        subprocess.call(["/usr/bin/backintime", "check-config"])
+        if not os.path.exists(os.path.join(mountpoint, ".config/backintime", "config")):
+            if ask_user(_("Setup backup"),
+                        _("You have not yet configured a backup for this "
+                          "volume yet. I can create a default configuration "
+                          "which you can change later using the BackInTime "
+                          "application.\n"
+                          "You will need to create a backup volume using "
+                          "the volume wizard, if you have not already done "
+                          "so.\n"
+                          "Do you want to create a backup configuration now?")):
+                shutil.copyfile("/usr/share/extended-volume-manager/backintime-config.tmpl",
+                                 os.path.join(mountpoint, ".config/backintime/config"))
+                with open(os.path.join(mountpoint, ".config/backintime/config"), 'a') as conf:
+                    conf.writelines("profile1.snapshots.include.1.value=%s" % mountpoint)
+    except:
+        show_error(_("An error occured while trying to create a default configuration."))
+    backupdir = os.path.join("/media", os.environ['USER'], "backup")
+    try:
+        if not os.path.isdir(backupdir):
+            subprocess.run(["sudo", "mkdir", "-m", "777", backupdir])
+        subprocess.run(["/usr/bin/backintime", "--quiet", "check-config"], check=True)
     except:
         show_error(_("An error occured while checking the backup configuration."))
-    
+    if os.path.isdir(backupdir):
+        subprocess.run(["sudo", "rmdir", backupdir])
+
 def _close_backintime(mountpoint):
+    backupdir = os.path.join("/media", os.environ['USER'], "backup")
+    if os.path.isdir(backupdir):
+        try:
+            subprocess.run(["/usr/bin/backintime", "backup"], check=True)
+        except:
+            show_error(_("An error occured while trying to run a (last) snapshot."))
     _unlink_confdir(mountpoint, ".config/backintime")
     _unlink_confdir(mountpoint, ".local/share/backintime")
-    try:
-        subprocess.call(["/usr/bin/backintime", "backup"])
-    except:
-        show_error(_("An error occured while trying to run a (last) snapshot."))
 
 def _open_okular(mountpoint):
-	_link_conffile(mountpoint, ".kde/share/config/okularrc")
-	_link_conffile(mountpoint, ".kde/share/config/okularpartrc")    
-	_link_confdir(mountpoint, ".kde/share/apps/okular")
+    _link_conffile(mountpoint, ".kde/share/config/okularrc")
+    _link_conffile(mountpoint, ".kde/share/config/okularpartrc")
+    _link_confdir(mountpoint, ".kde/share/apps/okular")
 
 def _close_okular(mountpoint):
-	_unlink_conffile(mountpoint, ".kde/share/config/okularrc")
-	_unlink_conffile(mountpoint, ".kde/share/config/okularpartrc")    
-	_unlink_confdir(mountpoint, ".kde/share/apps/okular")
-		
+    _unlink_conffile(mountpoint, ".kde/share/config/okularrc")
+    _unlink_conffile(mountpoint, ".kde/share/config/okularpartrc")
+    _unlink_confdir(mountpoint, ".kde/share/apps/okular")
+
 def _check_new_version(mountpoint):
-    if os.path.exists("%s/.gnupg" % mountpoint) and not os.path.exists("%s/.icedove" % mountpoint):
-        warnstring = _("You seem to be opening this extended container "\
-            "for the first time with this version. Please be aware of "\
-            "the following:\n"
+    if os.path.exists("%s/.gnupg" % mountpoint) and not os.path.exists("%s/.thunderbird" % mountpoint):
+        warnstring = _("You seem to be opening an extended container "\
+            "previously created with Ubuntu Privacy Remix. "\
+            "Please be aware of the following:\n"
             "* Evolution data cannot be migrated. Please open with " \
             "the old version instead, make a data backup within " \
             "evolution and restore it using this new version.\n" \
-            "* The password manager database will be converted "\
-            "and cannot be opened with older versions afterwards.\n"\
-            "* Some seahorse settings cannot be migrated and need to"\
-            "be re-done. This does not affect your keys or GnuPG "\
-            "settings.\n"
-            "* Beagle is not supported anymore, but its data will "\
-            "remain on the container. You may manually delete the "\
-            "folder '.beagle'.\n"
+            "* The password manager FPM is not supported anymore.\n" \
+            "We now use KeePass 2 instead. FPM data will remain on the "\
+            "container; please open it with UPR and export your passwords, " \
+            "then import them into KeePass with Discreete Linux.\n" \
+            "* <b>The keyring format of GnuPG has changed! Your existing "
+            "keys will be converted, and the old keyrings will remain in "
+            "place. This means you can use the keys you have right now "
+            "both with UPR and Discreete Linux. But any newly imported "
+            "or created keys will only be usable on the system they "
+            "were imported/created on. Please read the manual for "
+            "further details!</b>"
             "\n\n<b>Do you want to continue and open this extended "\
             "container?</b>")
         return ask_user(_("New Version"), warnstring)
     else:
         return True
 
-def extvol_open(mountpoint, dmname):
+def extvol_open(mountpoint):
     """ open an extended volume """
     global pyn
     syslog.syslog(syslog.LOG_DEBUG, "Opening volume at %s as extended volume" % \
-                                    mountpoint.encode('ascii', 'replace'))
+                                    mountpoint)
     # if the lock file says there's another one open, exit.
     if os.path.exists("%s/.mounted_as_extended_volume" \
         % os.environ["HOME"]):
@@ -871,7 +723,7 @@ def extvol_open(mountpoint, dmname):
         return
 
     # Check free space
-    s = os.statvfs(mountpoint.encode('utf-8'))
+    s = os.statvfs(mountpoint)
     df = (s.f_bavail * s.f_frsize)
     humanreadable = lambda s: [(s%1024**i and "%.1f"%(s/1024.0**i) or
                                 str(s/1024**i))+x.strip() for i, x in
@@ -891,9 +743,8 @@ def extvol_open(mountpoint, dmname):
 
     # open extended volume
     try:
-        marker = open("%s/.mounted_as_extended_volume" % os.environ["HOME"], "w")
-        marker.write("%s" % dmname)
-        marker.close()
+        with open("%s/.mounted_as_extended_volume" % os.environ["HOME"], "w") as marker:
+            marker.write("%s" % mountpoint)
         pyn.update(_("Please wait..."),
                    _("Extended volume is being opened, please wait!"), "usbpendrive_unmount")
         pyn.show()
@@ -901,7 +752,7 @@ def extvol_open(mountpoint, dmname):
         _open_gnupg(mountpoint)
         _open_evolution(mountpoint)
         _open_hamster(mountpoint)
-        _open_fpm(mountpoint)
+        _open_keepass(mountpoint)
         _open_libreoffice(mountpoint)
         _open_scribus(mountpoint)
         _open_gimp(mountpoint)
@@ -914,7 +765,7 @@ def extvol_open(mountpoint, dmname):
         _open_pulseaudio(mountpoint)
         _open_grsync(mountpoint)
         _open_kmymoney(mountpoint)
-        _open_icedove(mountpoint)
+        _open_thunderbird(mountpoint)
         _open_tracker(mountpoint)
         _open_backintime(mountpoint)
         _open_okular(mountpoint)
@@ -923,7 +774,7 @@ def extvol_open(mountpoint, dmname):
         # gconf-dumper will save above gconf dumps every 5 minutes, so you
         # have a fairly recent state after a crash or power loss
         syslog.syslog(syslog.LOG_DEBUG, "Starting the GConf dumper")
-        subprocess.call(["gconf-dumper.py", "-t", mountpoint])
+        subprocess.run(["gconf-dumper.py", "-t", mountpoint])
 
     except:
         show_error(variables=vars())
@@ -938,16 +789,19 @@ def extvol_close(mountpoint):
     """ Close an extended Volume """
     global pyn
     mountpoint = mountpoint.rstrip('/')
-    syslog.syslog(syslog.LOG_DEBUG, "Closing extended volume at %s" % \
-                                    mountpoint.encode('ascii', 'replace'))
-    if not os.path.ismount(mountpoint):
+    with open("%s/.mounted_as_extended_volume" % os.environ["HOME"], "r") as marker:
+        extvolmount = marker.readline().strip()
+    if not os.path.ismount(mountpoint) or (mountpoint != extvolmount):
         syslog.syslog(syslog.LOG_DEBUG, "No extended volume found at %s" % \
                                          mountpoint.encode('ascii', 'replace'))
         return
+    syslog.syslog(syslog.LOG_DEBUG, "Closing extended volume at %s" % \
+                                    mountpoint.encode('ascii', 'replace'))
     # Test open files
     syslog.syslog(syslog.LOG_DEBUG, "Looking for open files")
-    openfiles = subprocess.Popen(["/usr/bin/sudo", "/usr/bin/lsof", "-w", "-F", "n"],
-                                 stdout=subprocess.PIPE).communicate()[0]
+    openfiles = subprocess.run(["/usr/bin/sudo", "/usr/bin/lsof", "-w", "-F", "n"],
+                                 stdout=subprocess.PIPE,
+                                 universal_newlines=True).stdout
     openfiles = re.findall("^n(%s/(?!.local/share/hamster-applet|.local/share/evolution|.config/tracker|.cache/tracker|.local/share/tracker|.VirtualBox/VBoxSVC.log).*)$" % mountpoint, openfiles, re.MULTILINE)
     if len(openfiles) > 0:
         message = (_("There are still open files on %s, listed below. Please close them first.\n\n") % mountpoint + '\n')
@@ -961,12 +815,12 @@ def extvol_close(mountpoint):
     # kill evolution to make sure the volume can be dismounted later
     # restart gnome panel, clean up symlinks und copy back old folders if needed
     syslog.syslog(syslog.LOG_DEBUG, "Stopping the GConf dumper")
-    subprocess.call(["/usr/bin/gconf-dumper.py", "-q"])
-    subprocess.call(["evolution", "--force-shutdown"])
+    subprocess.run(["/usr/bin/gconf-dumper.py", "-q"])
+    subprocess.run(["evolution", "--force-shutdown"])
     _close_gnupg(mountpoint)
     _close_evolution(mountpoint)
     _close_hamster(mountpoint)
-    _close_fpm(mountpoint)
+    _close_keepass(mountpoint)
     _close_libreoffice(mountpoint)
     _close_scribus(mountpoint)
     _close_gimp(mountpoint)
@@ -979,19 +833,14 @@ def extvol_close(mountpoint):
     _close_pulseaudio(mountpoint)
     _close_grsync(mountpoint)
     _close_kmymoney(mountpoint)
-    _close_icedove(mountpoint)
+    _close_thunderbird(mountpoint)
     _close_tracker(mountpoint)
 
-    subprocess.call(["/usr/bin/killall", "gconfd-2"])
+    subprocess.run(["/usr/bin/killall", "gconfd-2"])
     _close_backintime(mountpoint)
     _close_okular(mountpoint)
-    #backupmp = _open_backup_container(mountpoint)
-    #if backupmp:
-    #    _do_backup(mountpoint, backupmp)
-        # _backup_other_containers(dmname, backupmp)
-    #    _close_backup_container(backupmp)
     syslog.syslog(syslog.LOG_DEBUG, "Syncing...")
-    subprocess.call(["/bin/sync"])
+    subprocess.run(["/bin/sync"])
     os.remove("%s/.mounted_as_extended_volume" % os.environ["HOME"])
     vm = Gio.VolumeMonitor.get()
     for mount in vm.get_mounts():
@@ -1007,4 +856,4 @@ def extvol_close(mountpoint):
                 pyn.show()
 
 if __name__ == "__main__":
-    print "This module cannot be called directly"
+    print("This module cannot be called directly")

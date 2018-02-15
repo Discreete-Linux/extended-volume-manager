@@ -8,11 +8,11 @@ Homepage: https://www.discreete-linux.org
 
 Package: extended-volume-manager
 Architecture: all
-Depends: ${misc:Depends}, util-linux, python, 
- python-daemon, hamster-applet, 
+Depends: ${misc:Depends}, ${python3:Depends}, util-linux, python3-cups, 
+ python3-daemon, hamster-applet, 
  rsync (>= 3.0), dosfstools, ntfs-3g, tracker,
  mtools, xterm, usb-imagewriter-ng, gir1.2-notify-0.7, exfat-utils
-Suggests: fpm2, virtualbox | virtualbox-ose | virtualbox-4.1 | virtualbox-4.2 | 
+Suggests: virtualbox | virtualbox-ose | virtualbox-4.1 | virtualbox-4.2 | 
  virtualbox-4.3 | virtualbox-5.0 | virtualbox-5.1
 Description: Provides the functionality of "extended Volumes"
  This package provides the functionality of "extended Volumes" within

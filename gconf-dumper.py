@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # Encoding: UTF-8
 
 import os
@@ -12,7 +12,7 @@ import tempfile
 import daemon
 import lockfile
 
-target = os.getcwd().decode('utf-8', 'replace')
+target = os.getcwd()
 
 def _write_dump(arg1=None, arg2=None):
     global target
@@ -34,7 +34,7 @@ def _write_dump(arg1=None, arg2=None):
             dumpfile.close()
         except:
             syslog.syslog(syslog.LOG_ERR, "Error occured trying to write to %s: %s" % \
-                          (dumpfile.encode('ascii', 'replace'), str(sys.exc_info())))
+                          (dumpfile, str(sys.exc_info())))
     for dconfdump in dconfdumps:
         try:
             dumpfile = open("%s/.%s-backup.txt.dump" % (target, dconfdump.rsplit('/', 1)[1]), 'w')
@@ -42,7 +42,7 @@ def _write_dump(arg1=None, arg2=None):
             dumpfile.close()
         except:
             syslog.syslog(syslog.LOG_ERR, "Error occured trying to write to %s: %s" % \
-                          (dumpfile.encode('ascii', 'replace'), str(sys.exc_info())))
+                          (dumpfile, str(sys.exc_info())))
 
 def main_loop():
     while True:
@@ -57,7 +57,7 @@ def do_quit(arg1=None, arg2=None):
 
 def main():
     global target
-    syslog.openlog("truecrypt-helper")
+    syslog.openlog("extended-volume-manager")
     action = "start"
     try:
         opts, unknown = getopt.getopt(sys.argv[1:], "rqt:")

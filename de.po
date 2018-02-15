@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: extended-volume-manager 0.1\n"
 "Report-Msgid-Bugs-To: info@discreete-linux.org\n"
-"POT-Creation-Date: 2017-03-02 11:12+0100\n"
-"PO-Revision-Date: 2017-03-02 11:16+0100\n"
+"POT-Creation-Date: 2017-06-02 14:23+0200\n"
+"PO-Revision-Date: 2017-06-02 14:28+0100\n"
 "Last-Translator: Discreete Linux Team <info@discreete-linux.org>\n"
 "Language-Team: LANGUAGE <de@li.org>\n"
 "Language: de\n"
@@ -41,7 +41,7 @@ msgstr "Erweiterten Container schließen"
 msgid "Closes and Unmounts the selected extended Volume"
 msgstr "Schließt des ausgewählten erweiterten Container"
 
-#: extvolmanager.py:112
+#: extvolmanager.py:143
 #, python-format
 msgid ""
 "A system error occured. The error was\n"
@@ -58,142 +58,12 @@ msgstr ""
 "Lokale Variablen:\n"
 "%(vars)s"
 
-#: extvolmanager.py:169
+#: extvolmanager.py:191
 #, python-format
 msgid "Could not set permissions and/or ownership on %s"
 msgstr "Konnte Rechte und/oder Eigentümer auf %s nicht setzen"
 
-#: extvolmanager.py:205 extvolmanager.py:226
-msgid "Do you want to da a backup?"
-msgstr "Wollen Sie ihre Daten sichern?"
-
-#: extvolmanager.py:206
-#, python-format
-msgid ""
-"It looks like you have a backup container/volume mounted at /media/backup. "
-"Do you want to use it for a backup of your files in %s?"
-msgstr ""
-"Es scheint, als wäre bereits ein Backup-Container auf /media/backup "
-"geöffnet. Soll er für eine Sicherung der Daten im Container %s verwendet "
-"werden?"
-
-#: extvolmanager.py:218
-msgid ""
-"More than one possible backup container or device was found. Automatic "
-"backup cannot continue. Please make sure only one backup container or device "
-"is present.\n"
-"\n"
-"I have found these containers and devices:\n"
-msgstr ""
-"Es wurde mehr als ein möglicher Backup-Container oder -Gerät gefunden. Das "
-"automatische Backup kann nicht ausgeführt werden. Bitte stellen Sie sicher, "
-"dass nur ein Backup-Container oder -Gerät existiert.\n"
-"\n"
-"Ich habe folgende Geräte und Container gefunden:\n"
-
-#: extvolmanager.py:227
-#, python-format
-msgid ""
-"%(backupname)s looks like an encrypted backup container. Do you want to use "
-"it for a backup of your files in %(origname)s? If you answer with \"OK\", "
-"you will have to enter the password for %(backupname)s in the next step."
-msgstr ""
-"%(backupname)s scheint ein verschlüsselter Backup-Container zu sein. Soll er "
-"für eine Sicherung der Daten im Container %(origname)s verwendet werden? "
-"Wenn Sie mit \"OK\" antworten, müssen Sie im nächsten Schritt das Passwort "
-"für den Container %(backupname)s eingeben"
-
-#: extvolmanager.py:239
-#, python-format
-msgid ""
-"%(backupname)s is not an \"extended volume\" and can therefore not be used "
-"for a backup.\n"
-"Please convert %(backupname)s to an \"extended Volume\" or create a new, "
-"ext3 formatted backup volume with name backup.tc."
-msgstr ""
-"%(backupname)s ist kein \"erweiterter Container\" und kann deshalb nicht für "
-"ein Backup verwendet werden.\n"
-"Bitte konvertieren Sie %(backupname)s zu einem \"erweiterten Truecrypt-"
-"Container\" oder legen Sie einen neuen, ext3-formatierten Backup-Container "
-"mit dem Namen backup.tc an."
-
-#: extvolmanager.py:250
-msgid "Unmounting"
-msgstr "Aushängen"
-
-#: extvolmanager.py:250
-msgid "Please wait until all data has been written to disk..."
-msgstr "Bitte warten, bis alle Daten auf Datenträger geschrieben wurden..."
-
-#: extvolmanager.py:269
-msgid ""
-"An error occured during backup!\n"
-"Could not create target directory."
-msgstr ""
-"Beim Backup ist ein Fehler aufgetreten!\n"
-"Konnte Zielverzeichnis nicht erstellen."
-
-#: extvolmanager.py:285
-msgid "An error occured during backup. Error occured while executing gtkrsync!"
-msgstr ""
-"Beim Backup ist ein Fehler aufgetreten!\n"
-"Ein Fehler trat auf beim Ausführen von gtkrsync!"
-
-#: extvolmanager.py:293 extvolmanager.py:318
-#, python-format
-msgid "Could not delete incomplete backup at %s"
-msgstr "Konnte unvollständiges Backup auf %s nicht löschen"
-
-#: extvolmanager.py:298
-msgid "Cleaning up"
-msgstr "Aufräumen"
-
-#: extvolmanager.py:298
-msgid "Old backups are being cleaned up, please wait..."
-msgstr "Alte Backups werden aufgeräumt, bitte warten..."
-
-#: extvolmanager.py:305
-#, python-format
-msgid "Could not delete old backup at %s"
-msgstr "Konnte altes Backup auf %s nicht löschen"
-
-#: extvolmanager.py:308
-msgid "Backup done."
-msgstr "Backup abgeschlossen."
-
-#: extvolmanager.py:309
-#, python-format
-msgid "Backup of %s successful."
-msgstr "Backup von %s erfolgreich."
-
-#: extvolmanager.py:313
-msgid ""
-"An error occured during backup!\n"
-"Maybe there is not enough space at the destination."
-msgstr ""
-"Beim Backup ist ein Fehler aufgetreten!\n"
-"Eventuell ist am Ziel nicht genügend Platz."
-
-#: extvolmanager.py:351
-msgid "Backup other containers?"
-msgstr "Andere Container sichern?"
-
-#: extvolmanager.py:352
-#, python-format
-msgid ""
-"You can now backup your other open containers as well. Their contents will "
-"be stored within the same backup container, but in a separate directory. Do "
-"you want to do this now?\n"
-"\n"
-"Hint: The backup container has %s free space."
-msgstr ""
-"Sie können jetzt auch andere geöffnete Container mit sichern. Ihr Inhalt "
-"wird im gleichen Backup-Container, aber in einem extra Ordner gespeichert. "
-"Wollen Sie das jetzt tun?\n"
-"\n"
-"Hinweis: Der Backup-Container hat noch %s frei."
-
-#: extvolmanager.py:540
+#: extvolmanager.py:368
 msgid ""
 "Failed to stop evolution, will skip loading evolution data from the extended "
 "container!"
@@ -201,7 +71,7 @@ msgstr ""
 "Konnte Evolution nicht anhalten, überspringe das Laden der Evolution-Daten "
 "vom erweiterten Container!"
 
-#: extvolmanager.py:719
+#: extvolmanager.py:540
 #, python-format
 msgid ""
 "Multiple virtual machines were found on %s, don't know which one to start. "
@@ -210,11 +80,11 @@ msgstr ""
 "Mehrere virtuelle Maschinen wurden auf %s gefunden, weiss nicht welche "
 "gestartet werden soll. Bitte manuell starten."
 
-#: extvolmanager.py:723
+#: extvolmanager.py:544
 msgid "Start Virtual Machine?"
 msgstr "Virtuelle Maschine starten?"
 
-#: extvolmanager.py:724
+#: extvolmanager.py:545
 #, python-format
 msgid ""
 "A virtual machine named \n"
@@ -225,7 +95,7 @@ msgstr ""
 "%s\n"
 "wurde gefunden. Soll sie gestartet werden?"
 
-#: extvolmanager.py:729
+#: extvolmanager.py:550
 #, python-format
 msgid ""
 "An error occured trying to start the virtual machine:\n"
@@ -235,53 +105,82 @@ msgstr ""
 "%s\n"
 "zu starten."
 
-#: extvolmanager.py:817
+#: extvolmanager.py:643
+msgid "Setup backup"
+msgstr "Backup einrichten"
+
+#: extvolmanager.py:644
+msgid ""
+"You have not yet configured a backup for this volume yet. I can create a "
+"default configuration which you can change later using the BackInTime "
+"application.\n"
+"You will need to create a backup volume using the volume wizard, if you have "
+"not already done so.\n"
+"Do you want to create a backup configuration now?"
+msgstr ""
+"Sie haben noch kein Backup für dieses Volume eingerichtet. Ich kann eine "
+"Standard-Konfiguration erzeugen, die später mit dem Programm BackInTime "
+"angepasst werden kann.\n"
+"Sie müssen dafür ein Backup-Volume mit dem Volume-Assistent erzeugen, falls "
+"nicht bereits geschehen.\n"
+"Soll jetzt eine Backup-Konfiguration erzeugt werden?"
+
+#: extvolmanager.py:657
+msgid "An error occured while trying to create a default configuration."
+msgstr "Ein Fehler trat auf beim Anlegen der Backup-Einstellungen."
+
+#: extvolmanager.py:661
 msgid "An error occured while checking the backup configuration."
 msgstr "Ein Fehler trat auf bei der Prüfung der Backup-Einstellungen."
 
-#: extvolmanager.py:825
+#: extvolmanager.py:669
 msgid "An error occured while trying to run a (last) snapshot."
 msgstr ""
 "Ein Fehler trat auf beim Versuch, einen (letzten) Schnappschuss zu erstellen."
 
-#: extvolmanager.py:829
+#: extvolmanager.py:683
 msgid ""
-"You seem to be opening this extended container for the first time with this "
-"version. Please be aware of the following:\n"
+"You seem to be opening an extended container previously created with Ubuntu "
+"Privacy Remix. Please be aware of the following:\n"
 "* Evolution data cannot be migrated. Please open with the old version "
 "instead, make a data backup within evolution and restore it using this new "
 "version.\n"
-"* The password manager database will be converted and cannot be opened with "
-"older versions afterwards.\n"
-"* Some seahorse settings cannot be migrated and need tobe re-done. This does "
-"not affect your keys or GnuPG settings.\n"
-"* Beagle is not supported anymore, but its data will remain on the "
-"container. You may manually delete the folder '.beagle'.\n"
-"\n"
+"* The password manager FPM is not supported anymore.\n"
+"We now use KeePass 2 instead. FPM data will remain on the container; please "
+"open it with UPR and export your passwords, then import them into KeePass "
+"with Discreete Linux.\n"
+"* <b>The keyring format of GnuPG has changed! Your existing keys will be "
+"converted, and the old keyrings will remain in place. This means you can use "
+"the keys you have right now both with UPR and Discreete Linux. But any newly "
+"imported or created keys will only be usable on the system they were "
+"imported/created on. Please read the manual for further details!</b>\n"
 "\n"
 "<b>Do you want to continue and open this extended container?</b>"
 msgstr ""
-"Sie öffnen diesen erweiterten Container offenbar zum ersten Mal mit dieser "
-"Version. Bitte beachten Sie folgendes:\n"
+"Sie öffnen einen erweiterten Container, der mit Ubuntu Privacy Remix erzeugt "
+"wurde. Bitte beachten Sie folgendes:\n"
 "* Evolution-Daten können nicht übernommen werden. Bitte statt dessen mit der "
 "alten Version öffnen, in Evolution eine Datensicherung durchführen und diese "
 "in der neuen Version importieren.\n"
-"* Die Passwort-Manager-Datenbank wird konvertiert und kann danach mit "
-"älteren Versionen u.U. nicht mehr geöffnet werden.\n"
-"* Einige Einstellungen der Schlüsselverwaltung Seahorse können nicht "
-"übernommen werden. Dies betrifft nicht die Schlüssel oder GnuPG-"
-"Einstellungen.\n"
-"* Beagle Volltextsuche wird nicht mehr unterstützt, aber die Daten "
-"verbleiben im Container. Sie können den Ordner \".beagle\" manuell löschen.\n"
-"\n"
+"* Der Passwort-Manager FPM wird nicht mehr unterstützt.\n"
+"Wir verwenden nun KeePass 2. Die Daten von FPM verbleiben im Container; "
+"bitte diese noch einmal unter UPR öffnen und die Kennwörter exportieren, "
+"anschliessend mit Discreete Linux in KeePass importieren.\n"
+"* <b>Das Schlüsselbund-Format von GnuPG hat sich geändert! Existierende "
+"Schlüssel werden konvertiert, die alten Schlüsselbunde bleiben intakt. Das "
+"bedeutet, Sie können die jetzt bereits vorhandenen Schlüssel sowohl mit UPR "
+"als auch mit Discreete Linux verwenden. Aber alle neu erzeugten oder "
+"importierten Schlüssel werden nur unter dem System nutzbar sein, unter dem "
+"sie erzeugt/importiert wurden. Bitte lesen Sie das Handbuch für nähere "
+"Details!</b>\n"
 "\n"
 "<b>Wollen Sie fortfahren und diesen erweiterten Container öffnen?</b>"
 
-#: extvolmanager.py:845
+#: extvolmanager.py:702
 msgid "New Version"
 msgstr "Neue Version"
 
-#: extvolmanager.py:857
+#: extvolmanager.py:714
 msgid ""
 "Either this is not an extended volume, or there is already another extended "
 "volume mounted. There can only be one extended volume mounted at a time."
@@ -290,11 +189,11 @@ msgstr ""
 "anderer erweiterter Container eingehängt. Es kann immer nur ein erweiterter "
 "Container gleichzeitig eingehängt sein."
 
-#: extvolmanager.py:869
+#: extvolmanager.py:726
 msgid "Low free space"
 msgstr "Wenig freier Speicherplatz"
 
-#: extvolmanager.py:870
+#: extvolmanager.py:727
 #, python-format
 msgid ""
 "There are only %(freebytes)s free on %(volume)s. This may cause problems "
@@ -310,23 +209,23 @@ msgstr ""
 "\n"
 "Jetz abbrechen?"
 
-#: extvolmanager.py:886 extvolmanager.py:945
+#: extvolmanager.py:743 extvolmanager.py:803
 msgid "Please wait..."
 msgstr "Bitte warten..."
 
-#: extvolmanager.py:887
+#: extvolmanager.py:744
 msgid "Extended volume is being opened, please wait!"
 msgstr "Erweiterter Container wird geöffnet, bitte warten!"
 
-#: extvolmanager.py:920
+#: extvolmanager.py:778
 msgid "Opening successful"
 msgstr "Öffnen erfolgreich"
 
-#: extvolmanager.py:921
+#: extvolmanager.py:779
 msgid "Extended volume opened successfully."
 msgstr "Erweiterter Container wurde erfolgreich geöffnet."
 
-#: extvolmanager.py:941
+#: extvolmanager.py:799
 #, python-format
 msgid ""
 "There are still open files on %s, listed below. Please close them first.\n"
@@ -336,20 +235,20 @@ msgstr ""
 "zuerst schließen und erneut versuchen.\n"
 "\n"
 
-#: extvolmanager.py:945
+#: extvolmanager.py:803
 msgid "Extended volume is being closed, please wait!"
 msgstr "Erweiterter Container wird geschlossen, bitte warten!"
 
-#: extvolmanager.py:991
+#: extvolmanager.py:845
 #, python-format
 msgid "Unmounting the volume at %s failed!"
 msgstr "Aushängen des Volumes auf %s fehlgeschlagen!"
 
-#: extvolmanager.py:993
+#: extvolmanager.py:847
 msgid "Closing successful"
 msgstr "Schließen erfolgreich"
 
-#: extvolmanager.py:993
+#: extvolmanager.py:847
 msgid "Extended volume closed successfully!"
 msgstr "Erweiterter Container wurde erfolgreich geschlossen."
 
@@ -360,6 +259,113 @@ msgid "Listens for mounted volumes which could be extended volumes"
 msgstr ""
 "Sucht nach eingehängten Datenträgern, die \"erweiterte Volumes\" sein "
 "könnten."
+
+#~ msgid "Do you want to da a backup?"
+#~ msgstr "Wollen Sie ihre Daten sichern?"
+
+#~ msgid ""
+#~ "It looks like you have a backup container/volume mounted at /media/"
+#~ "backup. Do you want to use it for a backup of your files in %s?"
+#~ msgstr ""
+#~ "Es scheint, als wäre bereits ein Backup-Container auf /media/backup "
+#~ "geöffnet. Soll er für eine Sicherung der Daten im Container %s verwendet "
+#~ "werden?"
+
+#~ msgid ""
+#~ "More than one possible backup container or device was found. Automatic "
+#~ "backup cannot continue. Please make sure only one backup container or "
+#~ "device is present.\n"
+#~ "\n"
+#~ "I have found these containers and devices:\n"
+#~ msgstr ""
+#~ "Es wurde mehr als ein möglicher Backup-Container oder -Gerät gefunden. "
+#~ "Das automatische Backup kann nicht ausgeführt werden. Bitte stellen Sie "
+#~ "sicher, dass nur ein Backup-Container oder -Gerät existiert.\n"
+#~ "\n"
+#~ "Ich habe folgende Geräte und Container gefunden:\n"
+
+#~ msgid ""
+#~ "%(backupname)s looks like an encrypted backup container. Do you want to "
+#~ "use it for a backup of your files in %(origname)s? If you answer with \"OK"
+#~ "\", you will have to enter the password for %(backupname)s in the next "
+#~ "step."
+#~ msgstr ""
+#~ "%(backupname)s scheint ein verschlüsselter Backup-Container zu sein. Soll "
+#~ "er für eine Sicherung der Daten im Container %(origname)s verwendet "
+#~ "werden? Wenn Sie mit \"OK\" antworten, müssen Sie im nächsten Schritt das "
+#~ "Passwort für den Container %(backupname)s eingeben"
+
+#~ msgid ""
+#~ "%(backupname)s is not an \"extended volume\" and can therefore not be "
+#~ "used for a backup.\n"
+#~ "Please convert %(backupname)s to an \"extended Volume\" or create a new, "
+#~ "ext3 formatted backup volume with name backup.tc."
+#~ msgstr ""
+#~ "%(backupname)s ist kein \"erweiterter Container\" und kann deshalb nicht "
+#~ "für ein Backup verwendet werden.\n"
+#~ "Bitte konvertieren Sie %(backupname)s zu einem \"erweiterten Truecrypt-"
+#~ "Container\" oder legen Sie einen neuen, ext3-formatierten Backup-"
+#~ "Container mit dem Namen backup.tc an."
+
+#~ msgid "Unmounting"
+#~ msgstr "Aushängen"
+
+#~ msgid "Please wait until all data has been written to disk..."
+#~ msgstr "Bitte warten, bis alle Daten auf Datenträger geschrieben wurden..."
+
+#~ msgid ""
+#~ "An error occured during backup!\n"
+#~ "Could not create target directory."
+#~ msgstr ""
+#~ "Beim Backup ist ein Fehler aufgetreten!\n"
+#~ "Konnte Zielverzeichnis nicht erstellen."
+
+#~ msgid ""
+#~ "An error occured during backup. Error occured while executing gtkrsync!"
+#~ msgstr ""
+#~ "Beim Backup ist ein Fehler aufgetreten!\n"
+#~ "Ein Fehler trat auf beim Ausführen von gtkrsync!"
+
+#~ msgid "Could not delete incomplete backup at %s"
+#~ msgstr "Konnte unvollständiges Backup auf %s nicht löschen"
+
+#~ msgid "Cleaning up"
+#~ msgstr "Aufräumen"
+
+#~ msgid "Old backups are being cleaned up, please wait..."
+#~ msgstr "Alte Backups werden aufgeräumt, bitte warten..."
+
+#~ msgid "Could not delete old backup at %s"
+#~ msgstr "Konnte altes Backup auf %s nicht löschen"
+
+#~ msgid "Backup done."
+#~ msgstr "Backup abgeschlossen."
+
+#~ msgid "Backup of %s successful."
+#~ msgstr "Backup von %s erfolgreich."
+
+#~ msgid ""
+#~ "An error occured during backup!\n"
+#~ "Maybe there is not enough space at the destination."
+#~ msgstr ""
+#~ "Beim Backup ist ein Fehler aufgetreten!\n"
+#~ "Eventuell ist am Ziel nicht genügend Platz."
+
+#~ msgid "Backup other containers?"
+#~ msgstr "Andere Container sichern?"
+
+#~ msgid ""
+#~ "You can now backup your other open containers as well. Their contents "
+#~ "will be stored within the same backup container, but in a separate "
+#~ "directory. Do you want to do this now?\n"
+#~ "\n"
+#~ "Hint: The backup container has %s free space."
+#~ msgstr ""
+#~ "Sie können jetzt auch andere geöffnete Container mit sichern. Ihr Inhalt "
+#~ "wird im gleichen Backup-Container, aber in einem extra Ordner "
+#~ "gespeichert. Wollen Sie das jetzt tun?\n"
+#~ "\n"
+#~ "Hinweis: Der Backup-Container hat noch %s frei."
 
 #~ msgid "TrueCrypt helper device listener"
 #~ msgstr "TrueCrypt Geräteerkennung"

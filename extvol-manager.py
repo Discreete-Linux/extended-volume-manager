@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # Extended Volume Manager Plugin for Nemo
 #
 # Part of "extended-volume-manager" Package
@@ -13,18 +13,22 @@
 #
 # Encoding: UTF-8
 """ A nemo extension which allows closing extended Volumes """
+from __future__ import print_function
 import gettext
 import os
 import subprocess
 import urllib
 from multiprocessing import Process
+import gi
+gi.require_version('Gtk', '3.0')
+gi.require_version('Nemo', '3.0')
 from gi.repository import GObject, Nemo
 
 class ExtvolManagerExtension(GObject.GObject, Nemo.MenuProvider, Nemo.InfoProvider):
     """ Allows closing extended Volumes """
     def __init__(self):
         """ Init the extionsion. """
-        print "Initializing nemo-extvol-manager extension"
+        print("Initializing nemo-extvol-manager extension")
 
     def close_activate_cb(self, menu, myfile):
         """ Handle menu activation, i.e. actual closing """
